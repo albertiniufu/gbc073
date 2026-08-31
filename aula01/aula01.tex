@@ -11,6 +11,9 @@
 %% perda e paradigmas de aprendizado.
 %%
 %% Compilar:  latexmk -xelatex aula01.tex   (duas passadas!)
+%%
+%% Imagens e links complementares: ver plano-aula1-imagens-e-links.md;
+%% baixe/atualize as fotos com  imagens/baixar-imagens.sh
 %% ============================================================
 \documentclass[aspectratio=169, 11pt]{beamer}
 
@@ -22,6 +25,8 @@
 \usepackage{babel}
 \babelprovide[import, main]{brazilian}
 \usepackage{booktabs}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\footnotesize, showstringspaces=false}
 
 \title[Aula 1 — Introdução]{Aula 1: Introdução — redes neurais como aproximadores universais}
 \subtitle[GBC073 — Inteligência Computacional]{Conexionismo \textbullet\ Perceptron \textbullet\ Universalidade \textbullet\ O papel da profundidade}
@@ -152,9 +157,9 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.34\textwidth}
-      \fotoslot{hinton.jpg}{3.2cm}{2.35cm}
-        {G.\ Hinton — Nobel de Física 2024, com J.\ Hopfield}
-        {Foto: Eviatar Bach, Wikimedia Commons, CC BY-SA 3.0}
+      \fotoslot{nobel-2024.jpg}{3.2cm}{2.35cm}
+        {J.\ Hopfield e G.\ Hinton — coletiva do Nobel de Física 2024}
+        {Foto: A.\ Petron, Wikimedia Commons, CC BY-SA 4.0}
     \end{column}
   \end{columns}
 
@@ -209,37 +214,48 @@
 \begin{frame}{O que uma rede profunda fez pela biologia}
   \framesubtitle{AlphaFold: o problema de 50 anos da estrutura de proteínas}
 
-  \begin{center}
-  \begin{tikzpicture}[node distance=0.55cm and 0.85cm]
-    \node[bloco fuzzy, font=\ttfamily\small] (seq) {MKVLLA\ldots GRT};
-    \node[below=1pt of seq, font=\scriptsize, text=icCinza] {sequência de aminoácidos};
-    \node[bloco, right=of seq, align=center] (rede) {rede profunda\\ (atenção + geometria)};
-    \node[right=1.1cm of rede] (prot) {};
-    \draw[icAzulClaro, very thick,
-          decorate, decoration={coil, aspect=0.62, segment length=3.4pt, amplitude=3.2pt}]
-      ([xshift=0.15cm, yshift=-0.32cm]prot.west) .. controls +(0.55,0.75) and +(-0.5,0.55) ..
-      ++(1.55,0.12);
-    \draw[icMagenta, very thick]
-      ([xshift=0.32cm, yshift=-0.42cm]prot.west) .. controls +(0.9,-0.42) and +(-0.35,-0.62) ..
-      ++(1.5,0.28);
-    \node[below=0.5cm of prot.east, xshift=-0.15cm, font=\scriptsize, text=icCinza]
-      {estrutura 3D prevista};
-    \draw[fluxo] (seq) -- (rede);
-    \draw[fluxo] (rede) -- ([xshift=0.2cm]prot.west |- rede.east);
-  \end{tikzpicture}
-  \end{center}
+  \begin{columns}[T]
+    \begin{column}{0.60\textwidth}
+      \begin{center}
+      \scalebox{0.58}{%
+      \begin{tikzpicture}[node distance=0.55cm and 0.85cm]
+        \node[bloco fuzzy, font=\ttfamily\small] (seq) {MKVLLA\ldots GRT};
+        \node[below=1pt of seq, font=\scriptsize, text=icCinza] {sequência de aminoácidos};
+        \node[bloco, right=of seq, align=center] (rede) {rede profunda\\ (atenção + geometria)};
+        \node[right=1.1cm of rede] (prot) {};
+        \draw[icAzulClaro, very thick,
+              decorate, decoration={coil, aspect=0.62, segment length=3.4pt, amplitude=3.2pt}]
+          ([xshift=0.15cm, yshift=-0.32cm]prot.west) .. controls +(0.55,0.75) and +(-0.5,0.55) ..
+          ++(1.55,0.12);
+        \draw[icMagenta, very thick]
+          ([xshift=0.32cm, yshift=-0.42cm]prot.west) .. controls +(0.9,-0.42) and +(-0.35,-0.62) ..
+          ++(1.5,0.28);
+        \node[below=0.5cm of prot.east, xshift=-0.15cm, font=\scriptsize, text=icCinza]
+          {estrutura 3D prevista};
+        \draw[fluxo] (seq) -- (rede);
+        \draw[fluxo] (rede) -- ([xshift=0.2cm]prot.west |- rede.east);
+      \end{tikzpicture}}
+      \end{center}
 
-  \begin{itemize}\setlength{\itemsep}{0.25ex}
-    \item Em 2020 (CASP14), atingiu precisão comparável à experimental —
-          problema aberto desde os anos 1970
-    \item Banco público com centenas de milhões de proteínas (CC BY 4.0);
-          Nobel de \emph{Química} 2024 para Hassabis e Jumper
-  \end{itemize}
+      \begin{itemize}\setlength{\itemsep}{0.25ex}
+        \item Em 2020 (CASP14), atingiu precisão comparável à experimental —
+              problema aberto desde os anos 1970
+        \item Banco público com centenas de milhões de proteínas; Nobel de
+              \emph{Química} 2024 para Hassabis e Jumper
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \fotoslot{alphafold-tmem253.jpg}{4.3cm}{2.2cm}
+        {Predição do AlphaFold, colorida pela confiança}
+        {Wikimedia Commons, CC0}
+    \end{column}
+  \end{columns}
 
+  \vspace{-0.75em}
   \begin{ideiabox}
-    Por dentro é a receita desta disciplina: modelo diferenciável de ponta a
-    ponta, treinado por gradiente — feito dos blocos de \emph{atenção} em que
-    este curso termina.
+    Por dentro é a receita desta disciplina: modelo diferenciável de ponta
+    a ponta, treinado por gradiente — e feito de \emph{atenção}, onde o
+    curso termina.
   \end{ideiabox}
 \end{frame}
 
@@ -332,8 +348,76 @@
   \end{itemize}
 \end{frame}
 
+% ------------------------------------------------------------
+\begin{frame}{Os rostos desta história}
+  \framesubtitle{Pitts, Rosenblatt, Widrow, Minsky, Papert, Rumelhart — os marcos de 1943 a 1986}
+
+  \begin{columns}[T]
+    \begin{column}{0.32\textwidth}
+      \fotoslot{pitts-1954.jpg}{2.05cm}{1.3cm}
+        {W.\ Pitts, 1954}
+        {F.\ Bello, domínio público}
+      \fotoslot{rosenblatt.jpg}{2.05cm}{1.3cm}
+        {F.\ Rosenblatt}
+        {Wikimedia Commons, CC BY-SA 4.0}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \fotoslot{widrow-adaline.jpg}{2.05cm}{1.3cm}
+        {B.\ Widrow -- ADALINE}
+        {Stanford Today, 1963, domínio público}
+      \fotoslot{minsky.jpg}{2.05cm}{1.3cm}
+        {M.\ Minsky}
+        {S.\ Woodworth, CC BY 3.0}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \fotoslot{papert.jpg}{2.05cm}{1.3cm}
+        {S.\ Papert}
+        {Matematicamente.it, CC BY-SA 3.0}
+      \fotoslot{rumelhart.jpg}{2.05cm}{1.3cm}
+        {D.\ Rumelhart}
+        {CC BY-SA 4.0}
+    \end{column}
+  \end{columns}
+
+  \vspace{-0.35em}
+  \begin{ideiabox}
+    Dois marcos esquecidos na linha do tempo: o ADALINE (1960) e a regra
+    delta de Widrow--Hoff — a avó da descida de gradiente da aula 2.
+  \end{ideiabox}
+\end{frame}
+
 % ============================================================
 \section{O perceptron por dentro}
+
+% ------------------------------------------------------------
+\begin{frame}{O desenho que começou tudo}
+  \framesubtitle{Cajal mostrou o neurônio como célula individual — McCulloch e Pitts o traduziram em matemática}
+
+  \begin{columns}[T]
+    \begin{column}{0.34\textwidth}
+      \fotoslot{cajal-purkinje.jpg}{4.1cm}{2.8cm}
+        {Purkinje (cerebelo humano) — desenho de Cajal}
+        {Cajal Institute (CSIC), Madri — domínio público}
+    \end{column}
+    \begin{column}{0.62\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.25ex}
+        \item \textbf{1906:} Cajal recebe o Nobel de Medicina pela
+              \alert{doutrina do neurônio} — células individuais que se
+              comunicam por \alert{sinapses}
+        \item \textbf{1943:} McCulloch \& Pitts reduzem o desenho a somar
+              entradas ponderadas e comparar com um limiar
+        \item De um desenho de beleza enciclopédica sobra um modelo de
+              poucas linhas — e é esse modelo que ainda sustenta o deep
+              learning
+      \end{itemize}
+      \vspace{-0.7em}
+      \begin{ideiabox}
+        A história da área é uma sucessão de \emph{simplificações felizes} —
+        cada uma descarta detalhe biológico e ganha poder de cálculo.
+      \end{ideiabox}
+    \end{column}
+  \end{columns}
+\end{frame}
 
 % ------------------------------------------------------------
 \begin{frame}{O original biológico}
@@ -507,6 +591,7 @@
     \end{column}
     \begin{column}{0.41\textwidth}
       \begin{center}
+        \scalebox{0.95}{%
         \begin{tikzpicture}
           \node[neuronio entrada] (a) {$x_1$};
           \node[neuronio entrada, below=0.85cm of a] (b) {$x_2$};
@@ -515,7 +600,7 @@
           \draw[sinapse] (b) -- node[peso] {$1$} (e);
           \node[neuronio saida, right=1.5cm of e] (s) {$\hat{y}$};
           \draw[sinapse destac] (e) -- (s);
-        \end{tikzpicture}
+        \end{tikzpicture}}
       \end{center}
       \small O neurônio é um \emph{votante com limiar}; a lógica é o caso
       particular em que os votos são inteiros.
@@ -634,6 +719,7 @@ for epoca in range(10):
   \begin{columns}[T]
     \begin{column}{0.5\textwidth}
       \begin{center}
+        \scalebox{0.98}{%
         \begin{tikzpicture}
           \node[neuronio entrada] (x1) {$x_1$};
           \node[neuronio entrada, below=1.05cm of x1] (x2) {$x_2$};
@@ -646,7 +732,7 @@ for epoca in range(10):
           \draw[sinapse] (x2) -- node[peso] {$1$} (h2);
           \draw[sinapse destac] (h1) -- node[peso] {$1$} (y);
           \draw[sinapse destac] (h2) -- node[peso] {$-2$} (y);
-        \end{tikzpicture}
+        \end{tikzpicture}}
       \end{center}
       \small Limiares: $h_1$ dispara com $\campo \ge 0{,}5$; $h_2$ com
       $\campo \ge 1{,}5$; $\hat y$ com $\campo \ge 0{,}5$. Verifique nas
@@ -839,22 +925,23 @@ for epoca in range(10):
 \begin{frame}{A hierarquia que emerge sozinha}
   \framesubtitle{Ninguém programou ``detecte uma borda'' — a rede organizou-se assim durante o treino}
 
-  \begin{center}
-    \begin{tikzpicture}[node distance=1.1cm and 1.4cm]
-      \node[bloco, minimum height=1.15cm] (baixo) {Baixo nível\\ linhas e bordas};
-      \node[bloco, right=of baixo, minimum height=1.15cm] (medio) {Nível médio\\ olhos, nariz, orelhas};
-      \node[bloco, right=of medio, minimum height=1.15cm] (alto) {Alto nível\\ estrutura facial};
-      \draw[fluxo] (baixo) -- (medio);
-      \draw[fluxo] (medio) -- (alto);
-    \end{tikzpicture}
-  \end{center}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \fotoslot{alexnet-arch.png}{6.4cm}{2.6cm}
+        {AlexNet (2012): a hierarquia de características em 8 camadas — da borda ao objeto}
+        {D.\ V.\ Godoy, Wikimedia Commons, CC BY 4.0}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.2ex}
+        \item Em reconhecimento facial, cada camada aprende um nível de
+              abstração
+        \item A hierarquia \emph{emerge} do treinamento — é isso que a
+              palavra ``profundo'' compra
+      \end{itemize}
+    \end{column}
+  \end{columns}
 
-  \begin{itemize}\setlength{\itemsep}{0.3ex}
-    \item Em reconhecimento facial, cada camada aprende um nível de abstração
-    \item A hierarquia \emph{emerge} do treinamento — é isso que a palavra
-          ``profundo'' compra
-  \end{itemize}
-
+  \vspace{-0.2em}
   \begin{ideiabox}
     É a versão grande do XOR: lá, a camada oculta construiu ``algum ligado''
     e ``ambos ligados''; aqui, constrói bordas, partes e rostos. O mecanismo
@@ -974,6 +1061,7 @@ for passo in range(5000):
     otim.step()                            # w <- w - lr * grad
 \end{lstlisting}
 
+  \vspace{-0.4em}
   \begin{itemize}
     \item Repare: degrau $\to$ \texttt{Tanh}/\texttt{Sigmoid}. Sem
           suavidade não há derivada; sem derivada não há \texttt{backward()}
@@ -1122,6 +1210,52 @@ for passo in range(5000):
 \end{frame}
 
 % ------------------------------------------------------------
+\begin{frame}{Para saber mais — sites e vídeos por assunto}
+  \framesubtitle{Tudo gratuito e verificado; clique no link para abrir — ou copie do LMS}
+
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      {\color{icCinza}\bfseries\scriptsize FUNDAMENTOS E HISTÓRIA}
+      {\scriptsize
+      \begin{itemize}\setlength{\itemsep}{0.3ex}
+        \item \textbf{3Blue1Brown} — o que é uma rede neural? (vídeo):
+              \href{https://youtu.be/aircAruvnKk}{\color{icAzulClaro}\texttt{youtu.be/aircAruvnKk}}
+        \item \textbf{3Blue1Brown} — série completa (playlist):
+              \href{https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi}{\color{icAzulClaro}\texttt{youtube.com/playlist?list=PLZHQObO\ldots}}
+        \item \textbf{MIT 6.S191} — introdução ao deep learning (curso):
+              \href{https://introtodeeplearning.com}{\color{icAzulClaro}\texttt{introtodeeplearning.com}}
+        \item \textbf{1958 em filme} — o Mark I aprende a ler (vídeo):
+              \href{https://youtu.be/cNxadbrN_aI}{\color{icAzulClaro}\texttt{youtu.be/cNxadbrN\_aI}}
+        \item \textbf{Nielsen} — cap.\ 1 e 4, provas visuais:
+              \href{https://neuralnetworksanddeeplearning.com}{\color{icAzulClaro}\texttt{neuralnetworksanddeeplearning.com}}
+        \item \textbf{Wikipedia} — Perceptron (pt):
+              \href{https://pt.wikipedia.org/wiki/Perceptron}{\color{icAzulClaro}\texttt{pt.wikipedia.org/wiki/Perceptron}}
+        \item \textbf{CMU 11-785} — palestras 1--2 (profundidade):
+              \href{https://deeplearning.cs.cmu.edu}{\color{icAzulClaro}\texttt{deeplearning.cs.cmu.edu}}
+      \end{itemize}}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      {\color{icCinza}\bfseries\scriptsize DEEP LEARNING HOJE}
+      {\scriptsize
+      \begin{itemize}\setlength{\itemsep}{0.3ex}
+        \item \textbf{Nobel 2024} — comunicado oficial (Física):
+              \href{https://www.nobelprize.org/prizes/physics/2024/press-release/}{\color{icAzulClaro}\texttt{nobelprize.org/prizes/physics/2024}}
+        \item \textbf{DeepMind} — AlphaFold, 50 anos resolvidos (blog):
+              \href{https://deepmind.google/discover/blog/alphafold-a-solution-to-a-50-year-old-grand-challenge-in-biology/}{\color{icAzulClaro}\texttt{deepmind.google (blog AlphaFold)}}
+        \item \textbf{PyTorch} — tutorial oficial:
+              \href{https://pytorch.org/tutorials/beginner/basics/intro.html}{\color{icAzulClaro}\texttt{pytorch.org/tutorials}}
+        \item \textbf{Karpathy} — Zero to Hero, do zero (curso):
+              \href{https://karpathy.ai/zero-to-hero.html}{\color{icAzulClaro}\texttt{karpathy.ai/zero-to-hero.html}}
+        \item \textbf{3Blue1Brown} — atenção e Transformers (vídeo):
+              \href{https://youtu.be/eMlx5fFNoYc}{\color{icAzulClaro}\texttt{youtu.be/eMlx5fFNoYc}}
+        \item \textbf{distill.pub} — o que cada camada aprende:
+              \href{https://distill.pub/2017/feature-visualization/}{\color{icAzulClaro}\texttt{distill.pub/feature-visualization}}
+      \end{itemize}}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
 \begin{frame}{Para casa}
   \begin{exbox}{1 — Portas na mão}
     Encontre pesos e viés de um perceptron de degrau para NAND. Em seguida,
@@ -1186,11 +1320,15 @@ for passo in range(5000):
     \end{column}
   \end{columns}
   \smallskip
+  \vspace{-0.3em}
   {\scriptsize \textbf{Livros:} Goodfellow, Bengio \& Courville (2016),
   \emph{Deep Learning}, MIT Press \textbullet\ Nielsen (2015),
   \texttt{neuralnetworksanddeeplearning.com}\par
-  \textbf{Imagens:} Wikimedia Commons — E.\ Bach (CC BY-SA 3.0);
-  National Museum of the U.S.\ Navy (domínio público).\par}
+  \textbf{Imagens:} Wikimedia Commons — A.\ Petron (CC BY-SA 4.0); S.\ Ramón
+  y Cajal (domínio público); F.\ Bello (domínio público); F.\ Rosenblatt
+  (CC BY-SA 4.0); Stanford Today (domínio público); S.\ Woodworth (CC BY 3.0);
+  Matematicamente.it (CC BY-SA 3.0); D.\ Rumelhart (CC BY-SA 4.0); AlphaFold
+  DB (CC0); D.\ Godoy (CC BY 4.0); U.S.\ Navy (domínio público).\par}
 \end{frame}
 
 \end{document}
