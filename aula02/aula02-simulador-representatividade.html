@@ -33,7 +33,6 @@
 
   main{max-width:980px; margin:0 auto; padding:26px 20px 60px}
 
-  /* prancha = seção de demo, ecoando as caixas do tema (filete à esquerda) */
   .prancha{
     background:#fff; border-left:4px solid var(--cor,var(--azul));
     box-shadow:0 1px 2px rgba(22,53,124,.07);
@@ -79,6 +78,40 @@
   .nota{font-size:.84rem; color:var(--cinza); margin-top:12px; max-width:78ch}
   .nota b{color:var(--tinta)}
   footer{max-width:980px; margin:0 auto; padding:0 20px 40px; color:var(--cinza); font-size:.82rem}
+
+  /* botão de ajuda "?" */
+  .ajuda{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:19px; height:19px; padding:0; margin-left:6px; vertical-align:2px;
+    border-radius:50%; border:1.4px solid var(--cinza); color:var(--cinza);
+    background:#fff; font-size:.74rem; font-weight:700; line-height:1; cursor:pointer;
+  }
+  .ajuda:hover, .ajuda:focus-visible{border-color:var(--azul); color:#fff; background:var(--azul)}
+  legend .ajuda{margin-left:4px}
+
+  /* janela de ajuda */
+  dialog#janela-ajuda{
+    border:none; border-left:4px solid var(--azul); border-radius:3px;
+    max-width:580px; width:calc(100vw - 40px);
+    padding:0; box-shadow:0 8px 30px rgba(22,32,48,.28); color:var(--tinta);
+  }
+  dialog#janela-ajuda::backdrop{background:rgba(22,32,48,.45)}
+  .aj-topo{display:flex; align-items:flex-start; justify-content:space-between;
+           gap:12px; padding:16px 18px 0}
+  .aj-topo h3{margin:0; font-size:1.02rem; color:var(--azul)}
+  .aj-fechar{border-color:var(--cinza); color:var(--cinza); font-weight:400;
+             padding:2px 9px}
+  .aj-corpo{padding:10px 18px 18px; font-size:.9rem}
+  .aj-corpo p{margin:8px 0}
+  .aj-corpo ul{margin:8px 0; padding-left:20px}
+  .aj-corpo li{margin:5px 0}
+  .aj-corpo .eq{
+    display:block; font-family:"Fira Mono",monospace; font-size:.88rem;
+    background:var(--fundo); border-left:3px solid var(--azul-claro);
+    padding:7px 12px; margin:10px 0; overflow-x:auto; white-space:nowrap;
+  }
+  .aj-corpo canvas{margin-top:10px}
+  .aj-corpo b{color:var(--azul)}
 </style>
 </head>
 <body>
@@ -87,7 +120,9 @@
   <div class="miolo">
     <h1>Aula 2 · O que uma rede consegue representar — simulador</h1>
     <p>GBC073 — Inteligência Computacional · UFU · Prof. Marcelo Keese Albertini.
-       Quatro construções da aula, manipuláveis. Adaptado da Lecture&nbsp;2 de 11-785 (CMU, S26).</p>
+       Quatro construções da aula, manipuláveis. Adaptado da Lecture&nbsp;2 de 11-785 (CMU, S26).
+       Os botões <span class="ajuda" style="cursor:default" aria-hidden="true">?</span> explicam
+       cada equação, gráfico, parâmetro e opção.</p>
     <nav aria-label="Demos">
       <a href="#porta">1 · Neurônio como porta</a>
       <a href="#prova">2 · A prova, passo a passo</a>
@@ -101,12 +136,14 @@
 
 <!-- ============================================================ 1: porta -->
 <section class="prancha" id="porta" style="--cor:var(--ciano)">
-  <h2>1 · O neurônio de limiar é uma porta lógica</h2>
+  <h2>1 · O neurônio de limiar é uma porta lógica
+      <button class="ajuda" data-ajuda="p-geral" aria-label="Ajuda: o que este demo mostra">?</button></h2>
   <p class="liga">Slides: portas AND/OR e “XOR exige camada oculta”.</p>
   <div class="duas">
     <div>
       <fieldset>
-        <legend>Parâmetros do neurônio</legend>
+        <legend>Parâmetros do neurônio
+          <button class="ajuda" data-ajuda="p-param" aria-label="Ajuda: parâmetros">?</button></legend>
         <label>peso w₁ <span class="valor" id="p-vw1"></span>
           <input type="range" id="p-w1" min="-2" max="2" step="0.05" value="1"></label>
         <label>peso w₂ <span class="valor" id="p-vw2"></span>
@@ -115,7 +152,8 @@
           <input type="range" id="p-T" min="-1" max="3" step="0.05" value="1.5"></label>
       </fieldset>
       <fieldset>
-        <legend>Função-alvo</legend>
+        <legend>Função-alvo
+          <button class="ajuda" data-ajuda="p-alvo" aria-label="Ajuda: funções-alvo">?</button></legend>
         <select id="p-alvo" aria-label="Função-alvo">
           <option value="AND">AND</option>
           <option value="OR">OR</option>
@@ -143,31 +181,37 @@
 
 <!-- ============================================================ 2: prova -->
 <section class="prancha" id="prova" style="--cor:var(--azul-claro)">
-  <h2>2 · A demonstração da aproximação universal, passo a passo</h2>
+  <h2>2 · A demonstração da aproximação universal, passo a passo
+      <button class="ajuda" data-ajuda="u-geral" aria-label="Ajuda: o que este demo mostra">?</button></h2>
   <p class="liga">Slides: “um pulso com dois degraus” e Passos 1–3 da prova.</p>
   <div class="duas">
     <div>
       <fieldset>
-        <legend>Função-alvo f</legend>
+        <legend>Função-alvo f
+          <button class="ajuda" data-ajuda="u-f" aria-label="Ajuda: funções-alvo">?</button></legend>
         <select id="u-f" aria-label="Função-alvo">
           <option value="seno">f(x) = 0,8·sen(2πx)</option>
           <option value="quadrada">onda quadrada</option>
-          <option value="rampa">rampa com salto suave</option>
+          <option value="rampa">rampa com salto</option>
         </select>
       </fieldset>
       <fieldset>
-        <legend>Passo 1 — partição</legend>
+        <legend>Passo 1 — partição
+          <button class="ajuda" data-ajuda="u-K" aria-label="Ajuda: partição">?</button></legend>
         <label>K janelas <span class="valor" id="u-vK"></span>
           <input type="range" id="u-K" min="2" max="80" step="1" value="8"></label>
         <label style="font-size:.82rem; color:var(--cinza)">
           <input type="checkbox" id="u-grade" checked> mostrar limiares T᥎</label>
       </fieldset>
       <fieldset>
-        <legend>Passos 2 e 3 — ativação</legend>
-        <label style="font-size:.86rem"><input type="radio" name="u-ativ" value="degrau" checked>
-          degrau u(x−T) — Passo 2</label>
-        <label style="font-size:.86rem"><input type="radio" name="u-ativ" value="sigmoide">
-          sigmoide σ(k(x−T)) — Passo 3</label>
+        <legend>Passos 2 e 3 — ativação a(z)
+          <button class="ajuda" data-ajuda="u-ativ" aria-label="Ajuda: ativações">?</button></legend>
+        <select id="u-ativ" aria-label="Função de ativação">
+          <option value="degrau">degrau u(z) — Passo 2</option>
+          <option value="sigmoide">sigmoide σ(kz) — Passo 3</option>
+          <option value="tanh">tanh reescalada</option>
+          <option value="rampa">rampa (2 ReLUs)</option>
+        </select>
         <label>inclinação k <span class="valor" id="u-vk"></span>
           <input type="range" id="u-k" min="5" max="400" step="5" value="60"></label>
       </fieldset>
@@ -176,22 +220,24 @@
     <div>
       <canvas id="u-cv" width="640" height="420" aria-label="Gráfico de f e da aproximação g"></canvas>
       <p class="nota"><b>O roteiro da prova está nos controles.</b> Suba K com o degrau: o erro
-      sup cai como a variação de f por janela (Passo 1 + 2). Troque para a sigmoide com k
-      pequeno: o erro reaparece <b>perto dos limiares</b>, exatamente as faixas do Passo 3.
-      Suba k: as faixas encolhem e o erro volta ao patamar do degrau. A rede é uma camada
-      oculta com 2K neurônios e saída linear — nada além disso.</p>
+      sup cai como a variação de f por janela (Passo 1 + 2). Troque para uma ativação suave com
+      k pequeno: o erro reaparece <b>perto dos limiares</b>, exatamente as faixas do Passo 3.
+      Suba k: as faixas encolhem e o erro volta ao patamar do degrau. Qualquer ativação com
+      limites 0 e 1 serve — é o que a prova exige, e nada mais.</p>
     </div>
   </div>
 </section>
 
 <!-- ============================================================ 3: treino -->
 <section class="prancha" id="treino" style="--cor:var(--magenta)">
-  <h2>3 · Largura vs. profundidade, treinadas de verdade</h2>
+  <h2>3 · Largura vs. profundidade, treinadas de verdade
+      <button class="ajuda" data-ajuda="t-geral" aria-label="Ajuda: o que este demo mostra">?</button></h2>
   <p class="liga">Slides: “No PyTorch: largura vs. profundidade” — aqui com backprop + Adam em JavaScript.</p>
   <div class="duas">
     <div>
       <fieldset>
-        <legend>As duas redes (ReLU)</legend>
+        <legend>As duas redes
+          <button class="ajuda" data-ajuda="t-redes" aria-label="Ajuda: arquiteturas">?</button></legend>
         <div style="font-size:.86rem">
           <span style="color:var(--dourado)">■</span> rasa
           <code id="t-arqR"></code><br>
@@ -200,7 +246,19 @@
         </div>
       </fieldset>
       <fieldset>
-        <legend>Treino</legend>
+        <legend>Função de ativação
+          <button class="ajuda" data-ajuda="t-ativ" aria-label="Ajuda: ativações no treino">?</button></legend>
+        <select id="t-ativ" aria-label="Função de ativação">
+          <option value="relu">ReLU</option>
+          <option value="leaky">LeakyReLU (0,1)</option>
+          <option value="tanh">tanh</option>
+          <option value="sigmoide">sigmoide</option>
+          <option value="degrau">degrau (não treina!)</option>
+        </select>
+      </fieldset>
+      <fieldset>
+        <legend>Treino
+          <button class="ajuda" data-ajuda="t-treino" aria-label="Ajuda: treino">?</button></legend>
         <div class="botoes">
           <button id="t-play">Treinar</button>
           <button id="t-reset" class="sec">Reiniciar</button>
@@ -223,12 +281,14 @@
 
 <!-- ============================================================ 4: paridade -->
 <section class="prancha" id="paridade" style="--cor:var(--verde)">
-  <h2>4 · O custo da paridade: raso vs. profundo</h2>
+  <h2>4 · O custo da paridade: raso vs. profundo
+      <button class="ajuda" data-ajuda="q-geral" aria-label="Ajuda: o que este demo mostra">?</button></h2>
   <p class="liga">Slides: “O pior caso: paridade”.</p>
   <div class="duas">
     <div>
       <fieldset>
-        <legend>Tamanho do problema</legend>
+        <legend>Tamanho do problema
+          <button class="ajuda" data-ajuda="q-N" aria-label="Ajuda: parâmetro N">?</button></legend>
         <label>N bits <span class="valor" id="q-vN"></span>
           <input type="range" id="q-N" min="2" max="24" step="1" value="8"></label>
       </fieldset>
@@ -248,6 +308,15 @@
   GBC073 · material de apoio da Aula 2 · funciona offline, sem dependências.
 </footer>
 
+<!-- janela de ajuda -->
+<dialog id="janela-ajuda" aria-labelledby="aj-titulo">
+  <div class="aj-topo">
+    <h3 id="aj-titulo"></h3>
+    <button class="aj-fechar sec" id="aj-fechar">fechar ✕</button>
+  </div>
+  <div class="aj-corpo" id="aj-corpo"></div>
+</dialog>
+
 <script>
 "use strict";
 /* util ------------------------------------------------------------ */
@@ -256,7 +325,7 @@ const COR = {azul:CSS('--azul'), azulClaro:CSS('--azul-claro'), ciano:CSS('--cia
              magenta:CSS('--magenta'), dourado:CSS('--dourado'), carmim:CSS('--carmim'),
              verde:CSS('--verde'), cinza:CSS('--cinza'), fundo:CSS('--fundo'), linha:CSS('--linha')};
 const $ = id => document.getElementById(id);
-function prepara(cv){                       // nitidez em telas de alta densidade
+function prepara(cv){
   const dpr = window.devicePixelRatio || 1;
   const w = cv.width, h = cv.height;
   cv.style.width = '100%';
@@ -266,37 +335,234 @@ function prepara(cv){                       // nitidez em telas de alta densidad
 }
 const fmt = x => x.toLocaleString('pt-BR');
 
+/* ============================ ativações compartilhadas (para gráficos) */
+const sigm = z => 1/(1+Math.exp(-z));
+// desenha curvas em [-alc,alc] x [ymin,ymax] dentro de um canvas de ajuda
+function desenhaCurvas(cv, curvas, alc, ymin, ymax){
+  const {g,w,h} = prepara(cv);
+  const X = x => (x+alc)/(2*alc)*(w-20)+10;
+  const Y = y => h-14-(y-ymin)/(ymax-ymin)*(h-28);
+  g.strokeStyle = COR.linha; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(X(-alc),Y(0)); g.lineTo(X(alc),Y(0));
+  g.moveTo(X(0),Y(ymin)); g.lineTo(X(0),Y(ymax)); g.stroke();
+  g.font = '11px Fira Sans, sans-serif';
+  let ty = 16;
+  for(const c of curvas){
+    g.strokeStyle = c.cor; g.lineWidth = 2; g.beginPath();
+    for(let i=0;i<=300;i++){
+      const x=-alc+2*alc*i/300, p=[X(x),Y(Math.max(ymin,Math.min(ymax,c.f(x))))];
+      i?g.lineTo(...p):g.moveTo(...p);
+    }
+    g.stroke();
+    g.fillStyle = c.cor; g.fillText(c.nome, 14, ty); ty += 15;
+  }
+}
+
+/* ============================================== sistema de ajuda "?" */
+const AJUDA = {
+'p-geral':{t:'O que este demo mostra', html:`
+  <p>Um único neurônio de limiar com duas entradas binárias. A saída é</p>
+  <span class="eq">ŷ = 1[ w₁X + w₂Y ≥ T ]</span>
+  <p><b>Como ler o gráfico:</b> a região sombreada é onde o neurônio dispara (ŷ = 1);
+  a reta azul é a fronteira w₁X + w₂Y = T. Cada círculo é uma linha da tabela-verdade:
+  o <b>preenchimento</b> rosa indica alvo 1, e a <b>borda</b> ciano indica que o neurônio
+  disparou. Um ponto está correto quando preenchimento e borda concordam.</p>
+  <p>Objetivo: encontrar (w₁, w₂, T) que acerte 4/4 para o alvo escolhido — e constatar
+  que, para o XOR, isso é impossível.</p>`},
+'p-param':{t:'Parâmetros w₁, w₂ e T', html:`
+  <ul>
+    <li><b>w₁ e w₂</b> — os pesos. Controlam a <b>direção</b> da reta: o vetor (w₁, w₂) é
+    perpendicular à fronteira e aponta para o lado onde o neurônio dispara. Pesos negativos
+    viram o lado do disparo.</li>
+    <li><b>T</b> — o limiar. <b>Desloca</b> a reta sem girá-la (é o negativo do viés:
+    T = −b). Subir T exige soma maior para disparar; a região sombreada encolhe.</li>
+  </ul>
+  <p>A reta de decisão satisfaz</p>
+  <span class="eq">w₁X + w₂Y = T</span>
+  <p>Três números, dois graus de liberdade visíveis: multiplicar (w₁, w₂, T) por uma
+  constante positiva não muda nada — só a razão entre eles importa.</p>`},
+'p-alvo':{t:'Funções-alvo e presets', html:`
+  <ul>
+    <li><b>AND</b> — alvo 1 só em (1,1). Linearmente separável; o preset usa
+    w = (1, 1), T = 1,5.</li>
+    <li><b>OR</b> — alvo 1 em três pontos. Também separável; preset w = (1, 1), T = 0,5.</li>
+    <li><b>XOR</b> — alvo 1 em (0,1) e (1,0), cantos opostos. <b>Não</b> é linearmente
+    separável: qualquer reta deixa pelo menos um ponto do lado errado, e o placar trava
+    em 3/4. Nos slides, o XOR é resolvido com 3 neurônios: OR e AND na camada oculta,
+    e a saída computa OR ∧ ¬AND.</li>
+  </ul>`},
+'u-geral':{t:'A construção da prova', html:`
+  <p>A rede aproximadora é uma soma de <b>pulsos</b>. Cada pulso usa dois neurônios com a
+  mesma ativação a(z) e limiares vizinhos:</p>
+  <span class="eq">pulsoᵢ(x) = a(x − Tᵢ) − a(x − Tᵢ₊₁)</span>
+  <span class="eq">g(x) = Σᵢ f(Tᵢ) · pulsoᵢ(x)</span>
+  <p>É uma MLP de <b>uma camada oculta com 2K neurônios</b> e saída linear — exatamente o
+  objeto do teorema.</p>
+  <p><b>Como ler o gráfico:</b> f em azul, g em magenta, linhas cinza verticais são os
+  limiares Tᵢ (a partição do Passo 1). O tracejado vermelho marca o ponto de pior erro —
+  o sup|f−g| do placar, medido em 1200 pontos.</p>`},
+'u-f':{t:'As três funções-alvo', html:`
+  <ul>
+    <li><b>0,8·sen(2πx)</b> — suave. A continuidade uniforme dá um δ generoso: o erro cai
+    rápido com K.</li>
+    <li><b>Onda quadrada</b> — tem saltos, logo <b>não</b> é contínua: o teorema não a
+    cobre no sup. Observe que o erro perto dos saltos não desaparece por completo — é a
+    hipótese de continuidade trabalhando (fora dos saltos, tudo funciona).</li>
+    <li><b>Rampa com salto</b> — mistura trecho suave e salto: dá para ver os dois
+    comportamentos no mesmo gráfico.</li>
+  </ul>`},
+'u-K':{t:'Passo 1 — a partição em K janelas', html:`
+  <p>Continuidade uniforme (Heine–Cantor): f contínua no compacto [0,1] garante que existe
+  δ tal que |x−x′| &lt; δ ⇒ |f(x)−f(x′)| &lt; ε/2. Particionamos em K janelas de largura
+  1/K &lt; δ:</p>
+  <span class="eq">0 = T₀ &lt; T₁ &lt; … &lt; T_K = 1,&nbsp;&nbsp;Tᵢ₊₁ − Tᵢ = 1/K</span>
+  <p>Com o degrau, g vale f(Tᵢ) em toda a janela i, então o erro é no máximo a variação
+  de f dentro da janela — que encolhe quando K cresce. <b>Custo:</b> 2K neurônios; o
+  slider mostra o preço da precisão.</p>
+  <p>A opção <b>mostrar limiares</b> desenha os Tᵢ (oculta acima de K = 40 para não
+  poluir).</p>`},
+'u-ativ':{t:'Ativações a(z) e a inclinação k', html:`
+  <p>A prova exige só isto da ativação: limites a(−∞) = 0 e a(+∞) = 1 (“sigmoidal”).
+  Qualquer uma das quatro serve — compare no gráfico:</p>
+  <canvas id="aj-cv-u" width="520" height="190"></canvas>
+  <ul>
+    <li><b>degrau</b> — u(z) = 1 se z ≥ 0, senão 0. É o Passo 2: erro só pela variação de
+    f por janela. O k é ignorado (o degrau já é “infinitamente inclinado”).</li>
+    <li><b>sigmoide</b> — σ(kz) = 1/(1+e<sup>−kz</sup>). A ativação do enunciado clássico
+    (Cybenko).</li>
+    <li><b>tanh reescalada</b> — (tanh(kz)+1)/2. Mesmos limites; é a sigmoide esticada:
+    tanh(z) = 2σ(2z) − 1.</li>
+    <li><b>rampa (2 ReLUs)</b> — ReLU(kz+½) − ReLU(kz−½), saturada em 0 e 1. Mostra que
+    redes ReLU também entram na prova: cada “neurônio sigmoidal” vira dois neurônios
+    ReLU.</li>
+  </ul>
+  <p><b>k (inclinação)</b> é o Passo 3: a(k(x−T)) → u(x−T) quando k → ∞. Com k pequeno,
+  as transições são largas (~1/k) e os pulsos vizinhos se contaminam — o erro cresce
+  perto dos limiares. A prova escolhe k grande o bastante para que esse erro extra
+  fique abaixo de ε/2.</p>`},
+'u-erro':{t:'O erro sup', html:`
+  <span class="eq">erro = sup₍x∈[0,1]₎ |f(x) − g(x)|</span>
+  <p>É a norma do teorema: o pior desvio, não a média. O orçamento da prova é
+  ε/2 (partição, Passos 1–2) + ε/2 (suavização, Passo 3).</p>`},
+'t-geral':{t:'O experimento', html:`
+  <p>Duas MLPs treinadas por gradiente para regressão do mesmo alvo, uma onda quadrada em
+  [−3, 3] amostrada em 256 pontos. A perda é o erro quadrático médio:</p>
+  <span class="eq">MSE = (1/N) Σₙ (g(xₙ) − yₙ)²</span>
+  <p><b>Como ler o gráfico:</b> alvo em azul fino; saída da rede rasa em dourado; da
+  profunda em magenta. O placar mostra os passos de treino e o MSE de cada rede.</p>
+  <p>É o experimento do slide de PyTorch, com backprop e Adam implementados em
+  JavaScript — sem bibliotecas.</p>`},
+'t-redes':{t:'As duas arquiteturas', html:`
+  <ul>
+    <li><b>rasa [1, 110, 1]</b> — uma camada oculta larga: 331 parâmetros.</li>
+    <li><b>profunda [1, 12, 12, 12, 1]</b> — três camadas estreitas: 349 parâmetros.</li>
+  </ul>
+  <p>Orçamentos quase iguais de propósito: a comparação é de <b>forma</b>, não de tamanho.
+  O nº de parâmetros de uma camada [n<sub>in</sub> → n<sub>out</sub>] é
+  n<sub>in</sub>·n<sub>out</sub> + n<sub>out</sub> (pesos + vieses).</p>
+  <p>Pela aula: com ReLU, o nº de regiões lineares cresce exponencialmente com a
+  profundidade e só polinomialmente com a largura (Montúfar et al., 2014) — a profunda
+  “dobra” o espaço; a rasa posiciona dobra por dobra.</p>`},
+'t-ativ':{t:'Ativações no treino', html:`
+  <p>Aqui a ativação entra <b>duas</b> vezes: na representação (quantas dobras a rede faz)
+  e no <b>gradiente</b> (o que o backprop propaga). Curvas e derivadas:</p>
+  <canvas id="aj-cv-t" width="520" height="190"></canvas>
+  <ul>
+    <li><b>ReLU</b> — max(0, z); derivada 1 para z &gt; 0, senão 0. Padrão moderno:
+    gradiente que não satura.</li>
+    <li><b>LeakyReLU</b> — z se z &gt; 0, senão 0,1z. Evita neurônios “mortos”
+    (gradiente nunca é exatamente zero).</li>
+    <li><b>tanh</b> — derivada 1 − tanh²(z), que → 0 nas pontas: satura. Treina, mas
+    tende a ser mais lenta em alvos com cantos.</li>
+    <li><b>sigmoide</b> — derivada σ(z)(1−σ(z)) ≤ ¼: satura ainda mais cedo.</li>
+    <li><b>degrau</b> — derivada 0 em todo lugar (exceto o ponto de salto, onde não
+    existe). O backprop propaga zero e <b>nada aprende</b>: é o argumento da aula 0 para
+    abandonar o degrau, agora visível. Selecione e treine — o MSE não sai do lugar.</li>
+  </ul>
+  <p>Trocar a ativação <b>reinicia</b> as duas redes.</p>`},
+'t-treino':{t:'Treino: Adam, passos e inicialização', html:`
+  <p><b>Treinar/Pausar</b> roda descida de gradiente em lote cheio com <b>Adam</b>, que
+  adapta o passo por parâmetro usando médias móveis do gradiente (m) e do seu quadrado
+  (v):</p>
+  <span class="eq">θ ← θ − η · m̂ / (√v̂ + ε),&nbsp;&nbsp;η = 0,004</span>
+  <ul>
+    <li><b>passos por quadro</b> — quantas atualizações por quadro de animação; só muda a
+    velocidade da visualização, não a trajetória.</li>
+    <li><b>Reiniciar</b> — sorteia pesos novos (inicialização de He: escala √(2/n<sub>in</sub>)).
+    Rode várias vezes: às vezes a rasa empaca num mínimo ruim. Existir uma boa rede
+    (aula de hoje) não garante que o gradiente a encontre (próximas aulas).</li>
+  </ul>`},
+'q-geral':{t:'As duas contagens', html:`
+  <p>Para computar a paridade (XOR de N bits) com neurônios de limiar:</p>
+  <span class="eq">rasa: 2^(N−1) neurônios em 1 camada oculta</span>
+  <span class="eq">profunda: 3(N−1) neurônios em 2·log₂N camadas</span>
+  <p>A rasa vem da DNF: a paridade tem 2<sup>N−1</sup> linhas com saída 1 na
+  tabela-verdade, e nenhum AND cobre duas (o mapa de Karnaugh é um tabuleiro de damas).
+  A profunda é a árvore de XORs: N−1 portas XOR, 3 neurônios cada.</p>
+  <p><b>Como ler o gráfico:</b> a escala vertical é <b>logarítmica</b> — cada linha-guia
+  multiplica por 100. Exponencial vira reta; linear vira quase nada.</p>`},
+'q-N':{t:'O parâmetro N', html:`
+  <p>N é o número de bits de entrada. Cada +1 em N <b>dobra</b> a rede rasa
+  (2<sup>N−1</sup>) e soma <b>3 neurônios</b> à profunda (3(N−1)).</p>
+  <p>Em N = 24: 8.388.608 contra 69 — razão de ~121 mil vezes. O placar mostra a razão
+  exata e o número de camadas ⌈2·log₂N⌉ da versão profunda.</p>`},
+};
+
+(function(){
+  const dlg = $('janela-ajuda');
+  document.addEventListener('click', ev=>{
+    const b = ev.target.closest('button.ajuda[data-ajuda]');
+    if(!b) return;
+    const item = AJUDA[b.dataset.ajuda];
+    if(!item) return;
+    $('aj-titulo').textContent = item.t;
+    $('aj-corpo').innerHTML = item.html;
+    dlg.showModal();
+    // gráficos dentro da ajuda
+    const cvU = $('aj-cv-u');
+    if(cvU) desenhaCurvas(cvU, [
+      {f:z=> z>=0?1:0,            cor:COR.cinza,   nome:'degrau'},
+      {f:z=> sigm(3*z),           cor:COR.magenta, nome:'sigmoide (k=3)'},
+      {f:z=> (Math.tanh(3*z)+1)/2,cor:COR.ciano,   nome:'tanh reescalada (k=3)'},
+      {f:z=> Math.min(Math.max(3*z+0.5,0),1), cor:COR.dourado, nome:'rampa (k=3)'},
+    ], 2, -0.15, 1.15);
+    const cvT = $('aj-cv-t');
+    if(cvT) desenhaCurvas(cvT, [
+      {f:z=> Math.max(0,z),       cor:COR.magenta, nome:'ReLU'},
+      {f:z=> z>0?z:0.1*z,         cor:COR.dourado, nome:'LeakyReLU'},
+      {f:z=> Math.tanh(z),        cor:COR.ciano,   nome:'tanh'},
+      {f:z=> sigm(z),             cor:COR.verde,   nome:'sigmoide'},
+      {f:z=> z>=0?1:0,            cor:COR.cinza,   nome:'degrau'},
+    ], 2.5, -1.15, 2.2);
+  });
+  $('aj-fechar').onclick = ()=> dlg.close();
+  dlg.addEventListener('click', ev=>{ if(ev.target===dlg) dlg.close(); });
+})();
+
 /* ================================================== 1 · porta lógica */
 (function(){
   const {g,w,h} = prepara($('p-cv'));
   const ALVOS = {AND:v=>v[0]&&v[1], OR:v=>v[0]||v[1], XOR:v=>v[0]^v[1]};
   const PTS = [[0,0],[0,1],[1,0],[1,1]];
-  // mapeamento do quadrado [-0.35,1.35]^2 para o canvas
   const X = x => (x+0.35)/1.7*w, Y = y => h-(y+0.35)/1.7*h;
 
-  function estado(){
-    return {w1:+$('p-w1').value, w2:+$('p-w2').value, T:+$('p-T').value,
-            alvo:$('p-alvo').value};
-  }
   function desenha(){
-    const {w1,w2,T,alvo} = estado();
+    const w1=+$('p-w1').value, w2=+$('p-w2').value, T=+$('p-T').value;
+    const alvo=$('p-alvo').value;
     $('p-vw1').textContent = w1.toFixed(2);
     $('p-vw2').textContent = w2.toFixed(2);
     $('p-vT').textContent  = T.toFixed(2);
     g.clearRect(0,0,w,h);
 
-    // semiplano de saída 1 (amostragem grossa e barata)
     g.fillStyle = COR.ciano+'22';
     const passo = 6;
     for(let px=0;px<w;px+=passo)for(let py=0;py<h;py+=passo){
       const x = px/w*1.7-0.35, y = (h-py)/h*1.7-0.35;
       if(w1*x+w2*y >= T) g.fillRect(px,py,passo,passo);
     }
-    // eixos
     g.strokeStyle = COR.linha; g.lineWidth = 1;
     g.beginPath(); g.moveTo(X(-0.3),Y(0)); g.lineTo(X(1.3),Y(0));
     g.moveTo(X(0),Y(-0.3)); g.lineTo(X(0),Y(1.3)); g.stroke();
-    // reta w1 x + w2 y = T
     g.strokeStyle = COR.azul; g.lineWidth = 2.5;
     g.beginPath();
     if(Math.abs(w2) > 1e-6){
@@ -307,7 +573,6 @@ const fmt = x => x.toLocaleString('pt-BR');
     }
     g.stroke();
 
-    // pontos e tabela
     const corpo = $('p-tabela').tBodies[0]; corpo.innerHTML='';
     let acertos = 0;
     for(const p of PTS){
@@ -315,7 +580,6 @@ const fmt = x => x.toLocaleString('pt-BR');
       const saida = soma >= T ? 1 : 0;
       const querido = ALVOS[alvo](p) ? 1 : 0;
       const ok = saida === querido; if(ok) acertos++;
-      // ponto: preenchimento = alvo, borda = saída do neurônio
       g.beginPath(); g.arc(X(p[0]),Y(p[1]),11,0,7);
       g.fillStyle = querido ? COR.magenta : '#fff'; g.fill();
       g.lineWidth = 3.5; g.strokeStyle = saida ? COR.ciano : COR.cinza; g.stroke();
@@ -345,35 +609,37 @@ const fmt = x => x.toLocaleString('pt-BR');
   const FS = {
     seno:     x => 0.8*Math.sin(2*Math.PI*x),
     quadrada: x => Math.sign(Math.sin(3*Math.PI*x+1e-9))*0.75,
-    rampa:    x => (x<0.45? 1.6*x-0.6 : 0.9-1.2*(x-0.45)) // rampa sobe, salta, desce
+    rampa:    x => (x<0.45? 1.6*x-0.6 : 0.9-1.2*(x-0.45))
   };
-  const sig = z => 1/(1+Math.exp(-z));
+  // ativações sigmoidais: limites 0 e 1; k é a inclinação
+  const ATIV = {
+    degrau:   k => (z => z>=0?1:0),
+    sigmoide: k => (z => sigm(k*z)),
+    tanh:     k => (z => (Math.tanh(k*z)+1)/2),
+    rampa:    k => (z => Math.min(Math.max(k*z+0.5,0),1)),  // ReLU(kz+1/2) - ReLU(kz-1/2)
+  };
   const X = x => x*(w-56)+40, Y = y => h/2 - y*(h/2-28);
 
   function desenha(){
     const f = FS[$('u-f').value];
     const K = +$('u-K').value, k = +$('u-k').value;
-    const ativ = document.querySelector('input[name=u-ativ]:checked').value;
-    const degrau = ativ==='degrau';
+    const nomeAtiv = $('u-ativ').value;
+    const degrau = nomeAtiv==='degrau';
     $('u-vK').textContent = K; $('u-vk').textContent = k;
     $('u-k').disabled = degrau;
 
-    // g(x) = soma de pulsos: f(T_i)·[a(x−T_i) − a(x−T_{i+1})]
     const T = Array.from({length:K+1},(_,i)=>i/K);
-    const a = degrau ? (z=> z>=0?1:0) : (z=> sig(k*z));
+    const a = ATIV[nomeAtiv](k);
     const G = x => { let s=0; for(let i=0;i<K;i++) s += f(T[i])*(a(x-T[i])-a(x-T[i+1])); return s; };
 
     g.clearRect(0,0,w,h);
-    // limiares (Passo 1)
     if($('u-grade').checked && K<=40){
       g.strokeStyle = COR.linha; g.lineWidth = 1;
       for(const t of T){ g.beginPath(); g.moveTo(X(t),Y(-1.05)); g.lineTo(X(t),Y(1.05)); g.stroke(); }
     }
-    // eixo
     g.strokeStyle = COR.cinza; g.lineWidth = 1;
     g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(1),Y(0)); g.stroke();
 
-    // f e g, e o erro sup em malha fina
     let supErr = 0, xPior = 0;
     const M = 1200;
     const tr = c=>{ g.strokeStyle=c; g.lineWidth=2.2; g.beginPath(); };
@@ -387,30 +653,30 @@ const fmt = x => x.toLocaleString('pt-BR');
       const p=[X(x),Y(gv)]; i?g.lineTo(...p):g.moveTo(...p);
     }
     g.stroke();
-    // marca do pior ponto
     g.strokeStyle = COR.carmim; g.lineWidth = 2; g.setLineDash([4,3]);
     g.beginPath(); g.moveTo(X(xPior),Y(f(xPior))); g.lineTo(X(xPior),Y(G(xPior))); g.stroke();
     g.setLineDash([]);
     g.font='12px Fira Sans, sans-serif';
     g.fillStyle = COR.azul;    g.fillText('f (alvo)', X(0.015), Y(1.02));
-    g.fillStyle = COR.magenta; g.fillText(`g (rede: ${2*K} degraus, 1 camada oculta)`, X(0.015), Y(1.02)+16);
+    g.fillStyle = COR.magenta; g.fillText(`g (rede: ${2*K} neurônios, 1 camada oculta)`, X(0.015), Y(1.02)+16);
 
+    const rotulos = {degrau:'só o Passo 2: erro ≤ variação de f por janela',
+      sigmoide:'Passo 3: faixas de largura ~1/k em torno dos limiares',
+      tanh:'Passo 3 com tanh: mesma prova, outra sigmoidal',
+      rampa:'Passo 3 com ReLUs: transição exata de largura 1/k'};
     $('u-placar').innerHTML =
-      `erro sup |f−g| = <b>${supErr.toFixed(3)}</b><br>` +
-      (degrau
-        ? `<span style="color:var(--cinza)">só o Passo 2: erro ≤ variação de f por janela</span>`
-        : `<span style="color:var(--cinza)">Passo 3: faixas de largura ~1/k em torno dos limiares</span>`);
+      `erro sup |f−g| = <b>${supErr.toFixed(3)}</b>
+       <button class="ajuda" data-ajuda="u-erro" aria-label="Ajuda: erro sup">?</button><br>` +
+      `<span style="color:var(--cinza)">${rotulos[nomeAtiv]}</span>`;
   }
   for(const id of ['u-K','u-k']) $(id).oninput = desenha;
-  $('u-f').onchange = desenha; $('u-grade').onchange = desenha;
-  for(const r of document.querySelectorAll('input[name=u-ativ]')) r.onchange = desenha;
+  for(const id of ['u-f','u-ativ','u-grade']) $(id).onchange = desenha;
   desenha();
 })();
 
 /* ================================= 3 · treino: largura vs profundidade */
 (function(){
   const {g,w,h} = prepara($('t-cv'));
-  // dados: onda quadrada em [-3,3]
   const NPTS = 256;
   const xs = Array.from({length:NPTS},(_,i)=>-3+6*i/(NPTS-1));
   const ys = xs.map(x=>Math.sign(Math.sin(4*x)));
@@ -419,14 +685,24 @@ const fmt = x => x.toLocaleString('pt-BR');
   $('t-arqR').textContent = '['+ARQ_RASA.join(', ')+']';
   $('t-arqP').textContent = '['+ARQ_PROF.join(', ')+']';
 
+  // ativações: f(z) e derivada escrita em função da SAIDA a = f(z)
+  // (relu/tanh/sigmoide permitem isso; leaky usa o sinal de a; degrau tem derivada 0)
+  const ATIV = {
+    relu:    {f:z=>Math.max(0,z),      d:a=> a>0?1:0},
+    leaky:   {f:z=> z>0?z:0.1*z,       d:a=> a>0?1:0.1},
+    tanh:    {f:z=>Math.tanh(z),       d:a=> 1-a*a},
+    sigmoide:{f:z=>sigm(z),            d:a=> a*(1-a)},
+    degrau:  {f:z=> z>=0?1:0,          d:a=> 0},
+  };
+  let ativ = ATIV.relu;
+
   function novaRede(arq){
     const W=[],B=[];
     for(let l=0;l<arq.length-1;l++){
-      const nin=arq[l], nout=arq[l+1], esc=Math.sqrt(2/nin); // He init
+      const nin=arq[l], nout=arq[l+1], esc=Math.sqrt(2/nin);
       W.push(Float64Array.from({length:nin*nout},()=> (Math.random()*2-1)*esc));
       B.push(new Float64Array(nout));
     }
-    // estado do Adam
     const z = a=>a.map(v=>new Float64Array(v.length));
     return {arq,W,B,mW:z(W),vW:z(W),mB:z(B),vB:z(B),t:0};
   }
@@ -434,21 +710,20 @@ const fmt = x => x.toLocaleString('pt-BR');
   $('t-pR').textContent = nParams(ARQ_RASA)+' parâmetros';
   $('t-pP').textContent = nParams(ARQ_PROF)+' parâmetros';
 
-  function adiante(r,x){          // guarda ativações para o backprop
+  function adiante(r,x){
     const A=[Float64Array.of(x)];
     for(let l=0;l<r.W.length;l++){
       const nin=r.arq[l], nout=r.arq[l+1], z=new Float64Array(nout), ant=A[l];
       for(let j=0;j<nout;j++){
         let s=r.B[l][j];
         for(let i=0;i<nin;i++) s+=r.W[l][j*nin+i]*ant[i];
-        z[j]= l<r.W.length-1 ? Math.max(0,s) : s;   // ReLU, saida linear
+        z[j]= l<r.W.length-1 ? ativ.f(s) : s;      // ativação escolhida; saida linear
       }
       A.push(z);
     }
     return A;
   }
   function passoTreino(r, lr){
-    // gradiente acumulado em lote cheio
     const gW=r.W.map(v=>new Float64Array(v.length)), gB=r.B.map(v=>new Float64Array(v.length));
     let perda=0;
     for(let n=0;n<NPTS;n++){
@@ -467,11 +742,10 @@ const fmt = x => x.toLocaleString('pt-BR');
             dAnt[i]+=dj*r.W[l][j*nin+i];
           }
         }
-        if(l>0) for(let i=0;i<nin;i++) if(A[l][i]<=0) dAnt[i]=0;  // ReLU'
+        if(l>0) for(let i=0;i<nin;i++) dAnt[i]*=ativ.d(A[l][i]);   // derivada da ativação
         delta=dAnt;
       }
     }
-    // Adam
     r.t++; const b1=0.9,b2=0.999,eps=1e-8;
     const c1=1-Math.pow(b1,r.t), c2=1-Math.pow(b2,r.t);
     for(let l=0;l<r.W.length;l++){
@@ -497,7 +771,8 @@ const fmt = x => x.toLocaleString('pt-BR');
     g.clearRect(0,0,w,h);
     g.strokeStyle=COR.linha; g.beginPath(); g.moveTo(X(-3),Y(0)); g.lineTo(X(3),Y(0)); g.stroke();
     const curva=(f,c,lw)=>{ g.strokeStyle=c; g.lineWidth=lw; g.beginPath();
-      for(let i=0;i<=400;i++){ const x=-3+6*i/400; const p=[X(x),Y(f(x))];
+      for(let i=0;i<=400;i++){ const x=-3+6*i/400;
+        const p=[X(x),Y(Math.max(-1.7,Math.min(1.7,f(x))))];
         i?g.lineTo(...p):g.moveTo(...p);} g.stroke(); };
     curva(x=>Math.sign(Math.sin(4*x)), COR.azul, 1.6);
     curva(x=>prediz(rasa,x), COR.dourado, 2.4);
@@ -506,14 +781,17 @@ const fmt = x => x.toLocaleString('pt-BR');
     g.fillStyle=COR.azul;    g.fillText('alvo', 14, 18);
     g.fillStyle=COR.dourado; g.fillText('rasa', 52, 18);
     g.fillStyle=COR.magenta; g.fillText('profunda', 92, 18);
+    const aviso = $('t-ativ').value==='degrau' && passos>0
+      ? '<br><span class="ruim">gradiente nulo: o degrau não aprende</span>' : '';
     $('t-placar').innerHTML =
       `passos: <b>${passos}</b><br>` +
       `MSE rasa <b>${perdaR!==null?perdaR.toFixed(4):'—'}</b> · ` +
-      `profunda <b>${perdaP!==null?perdaP.toFixed(4):'—'}</b>`;
+      `profunda <b>${perdaP!==null?perdaP.toFixed(4):'—'}</b>` + aviso;
   }
   function reinicia(){
     rodando=false; if(quadro) cancelAnimationFrame(quadro);
     $('t-play').textContent='Treinar';
+    ativ = ATIV[$('t-ativ').value];
     rasa=novaRede(ARQ_RASA); prof=novaRede(ARQ_PROF);
     passos=0; perdaR=null; perdaP=null;
     desenha();
@@ -536,6 +814,7 @@ const fmt = x => x.toLocaleString('pt-BR');
     if(rodando) roda();
   };
   $('t-reset').onclick=reinicia;
+  $('t-ativ').onchange=reinicia;
   $('t-vel').oninput=()=>{$('t-vvel').textContent=$('t-vel').value;};
   $('t-vvel').textContent=$('t-vel').value;
   reinicia();
@@ -549,17 +828,16 @@ const fmt = x => x.toLocaleString('pt-BR');
     $('q-vN').textContent=N;
     const raso=Math.pow(2,N-1), prof=3*(N-1), camadas=Math.ceil(2*Math.log2(N));
     g.clearRect(0,0,w,h);
-    const maxLog=Math.log10(Math.pow(2,23));            // teto fixo: escala estável
+    const maxLog=Math.log10(Math.pow(2,23));
     const alt=v=>Math.max(3,(Math.log10(Math.max(v,1))/maxLog)*(h-70));
     const barra=(cx,v,c,rot)=>{
       const a=alt(v);
       g.fillStyle=c; g.fillRect(cx-55,h-40-a,110,a);
-      g.fillStyle=COR.tinta; g.font='bold 13px Fira Mono, monospace'; g.textAlign='center';
+      g.fillStyle='#1A2030'; g.font='bold 13px Fira Mono, monospace'; g.textAlign='center';
       g.fillText(fmt(v), cx, h-46-a);
       g.fillStyle=COR.cinza; g.font='12px Fira Sans, sans-serif';
       g.fillText(rot, cx, h-22); g.textAlign='left';
     };
-    // linhas-guia da escala log
     g.strokeStyle=COR.linha; g.fillStyle=COR.cinza; g.font='10px Fira Mono, monospace';
     for(let e=1;e<=7;e+=2){
       const y=h-40-(e/maxLog)*(h-70);
