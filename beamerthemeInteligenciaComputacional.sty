@@ -1,0 +1,392 @@
+%% ============================================================
+%% beamerthemeInteligenciaComputacional.sty
+%% Tema GBC073 — Inteligência Computacional (FACOM/UFU)
+%% Reconstrução compatível com a API documentada no
+%% GUIA-DO-TEMPLATE-GBC073. Compilar com XeLaTeX.
+%% ============================================================
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{beamerthemeInteligenciaComputacional}[2026/08/28 Tema GBC073]
+
+\mode<presentation>
+
+% ---------- pacotes ------------------------------------------------
+\RequirePackage{fontspec}
+\RequirePackage{amsmath, amssymb, mathtools, bm}
+\RequirePackage{etoolbox}
+\RequirePackage{tikz}
+\RequirePackage[most]{tcolorbox}
+\usetikzlibrary{arrows.meta, positioning, calc, fit, chains,
+                decorations.pathmorphing}
+
+% ---------- fontes --------------------------------------------------
+\usefonttheme{professionalfonts}
+\IfFontExistsTF{Fira Sans}{%
+  \setsansfont{Fira Sans}[Scale=0.96]%
+  \IfFontExistsTF{Fira Mono}{\setmonofont{Fira Mono}[Scale=0.88]}%
+                            {\setmonofont{Latin Modern Mono}[Scale=0.92]}%
+}{%
+  \setsansfont{TeX Gyre Heros}[Scale=0.96]%
+  \setmonofont{Latin Modern Mono}[Scale=0.92]%
+}
+
+% ---------- paleta ---------------------------------------------------
+\definecolor{icAzul}{HTML}{16357C}       % primária
+\definecolor{icAzulClaro}{HTML}{3F6DC4}
+\definecolor{icCiano}{HTML}{0D8A99}      % definições
+\definecolor{icMagenta}{HTML}{D12E6E}    % destaque / ação
+\definecolor{icDourado}{HTML}{E9A100}    % intuição
+\definecolor{icCarmim}{HTML}{B3121B}     % alerta
+\definecolor{icVerde}{HTML}{1E8E5A}      % fechamento
+\definecolor{icCinza}{HTML}{55607A}      % texto secundário
+\definecolor{icFundo}{HTML}{F5F7FC}
+\definecolor{icFundoQuiz}{HTML}{FDF6EC}
+% paradigmas
+\definecolor{icNeural}{HTML}{16357C}
+\definecolor{icEvol}{HTML}{1B7E72}
+\definecolor{icFuzzy}{HTML}{D12E6E}
+% apelidos da versão violeta (compatibilidade)
+\colorlet{icRoxo}{icAzul}
+\colorlet{icRoxoClaro}{icAzulClaro}
+
+% ---------- cores do beamer -----------------------------------------
+\setbeamercolor{normal text}{fg=black!85, bg=white}
+\setbeamercolor{structure}{fg=icAzul}
+\setbeamercolor{alerted text}{fg=icMagenta}
+\setbeamercolor{example text}{fg=icVerde}
+\setbeamercolor{frametitle}{fg=white, bg=icAzul}
+\setbeamercolor{framesubtitle}{fg=icAzulClaro!25!white}
+\setbeamercolor{title}{fg=icAzul}
+\setbeamercolor{subtitle}{fg=icCinza}
+\setbeamercolor{author}{fg=black!80}
+\setbeamercolor{institute}{fg=icCinza}
+\setbeamercolor{date}{fg=icCinza}
+\setbeamercolor{footlinecolor}{fg=icCinza, bg=icFundo}
+\setbeamercolor{itemize item}{fg=icMagenta}
+\setbeamercolor{itemize subitem}{fg=icAzulClaro}
+\setbeamercolor{itemize subsubitem}{fg=icCinza}
+\setbeamercolor{enumerate item}{fg=icMagenta}
+\setbeamercolor{caption name}{fg=icAzul}
+\setbeamercolor{button}{fg=white, bg=icAzulClaro}
+
+% ---------- fontes do beamer -----------------------------------------
+\setbeamerfont{frametitle}{series=\bfseries, size=\large}
+\setbeamerfont{framesubtitle}{series=\mdseries, size=\small}
+\setbeamerfont{title}{series=\bfseries, size=\LARGE}
+\setbeamerfont{subtitle}{series=\mdseries, size=\normalsize}
+\setbeamerfont{author}{series=\bfseries, size=\normalsize}
+\setbeamerfont{institute}{size=\small}
+\setbeamerfont{date}{size=\small}
+\setbeamerfont{footline}{size=\tiny}
+
+% ---------- elementos de lista ---------------------------------------
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}{\raisebox{0.18ex}{\scalebox{0.75}{$\blacktriangleright$}}}
+\setbeamertemplate{itemize subitem}{\raisebox{0.18ex}{\rule{0.6em}{0.12em}}}
+\setbeamertemplate{itemize subsubitem}{\raisebox{0.25ex}{\scalebox{0.6}{$\bullet$}}}
+\setbeamertemplate{blocks}[rounded][shadow=false]
+\setlength{\leftmargini}{1.2em}
+\setlength{\leftmarginii}{1.1em}
+
+% ---------- título do frame -------------------------------------------
+\makeatletter
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \begin{beamercolorbox}[wd=\paperwidth, sep=0pt,
+      leftskip=0.55cm, rightskip=0.4cm plus1fil]{frametitle}%
+    \vspace{0.16cm}%
+    {\usebeamerfont{frametitle}\insertframetitle\strut\par}%
+    \ifdefempty{\beamer@frametitle}{}{}%
+    \ifx\insertframesubtitle\@empty\else
+      \begingroup
+        \usebeamerfont{framesubtitle}%
+        \usebeamercolor[fg]{framesubtitle}%
+        \insertframesubtitle\strut\par
+      \endgroup
+    \fi
+    \vspace{0.10cm}%
+  \end{beamercolorbox}%
+  \vspace{0.12cm}%
+}
+\makeatother
+
+% ---------- rodapé com barra de progresso ------------------------------
+\makeatletter
+\setbeamertemplate{footline}{%
+  \vbox{%
+    \hbox{%
+      \begin{beamercolorbox}[wd=.44\paperwidth, ht=2.4ex, dp=1.1ex,
+          leftskip=0.55cm]{footlinecolor}%
+        \usebeamerfont{footline}\insertshorttitle
+      \end{beamercolorbox}%
+      \begin{beamercolorbox}[wd=.40\paperwidth, ht=2.4ex, dp=1.1ex,
+          center]{footlinecolor}%
+        \usebeamerfont{footline}\insertshortsubtitle
+      \end{beamercolorbox}%
+      \begin{beamercolorbox}[wd=.16\paperwidth, ht=2.4ex, dp=1.1ex,
+          rightskip=0.55cm]{footlinecolor}%
+        \usebeamerfont{footline}\hfill\insertframenumber\,/\,\inserttotalframenumber
+      \end{beamercolorbox}}%
+    \hbox{%
+      \rlap{\color{icAzul!15}\rule{\paperwidth}{1.6pt}}%
+      \ifnum\inserttotalframenumber>0
+        {\color{icMagenta}%
+         \rule{\dimexpr\paperwidth*\insertframenumber/\inserttotalframenumber\relax}{1.6pt}}%
+      \fi}%
+  }%
+}
+\makeatother
+
+% ---------- página de título --------------------------------------------
+\defbeamertemplate*{title page}{ic}[1][]{%
+  \begin{tikzpicture}[remember picture, overlay]
+    % decoração: rede neural esmaecida no canto direito
+    \begin{scope}[shift={($(current page.south east)+(-3.4,1.1)$)}, opacity=0.5]
+      \foreach \j in {1,2,3}
+        \node[circle, draw=icAzul!25, fill=icAzul!8, minimum size=0.55cm]
+          (tp-a-\j) at (0, \j*0.95) {};
+      \foreach \j in {1,2,3,4}
+        \node[circle, draw=icAzul!25, fill=icAzul!8, minimum size=0.55cm]
+          (tp-b-\j) at (1.25, \j*0.95-0.48) {};
+      \foreach \j in {1,2}
+        \node[circle, draw=icMagenta!30, fill=icMagenta!8, minimum size=0.55cm]
+          (tp-c-\j) at (2.5, \j*0.95+0.48) {};
+      \foreach \i in {1,2,3} \foreach \j in {1,2,3,4}
+        \draw[icAzul!18] (tp-a-\i) -- (tp-b-\j);
+      \foreach \i in {1,2,3,4} \foreach \j in {1,2}
+        \draw[icAzul!18] (tp-b-\i) -- (tp-c-\j);
+    \end{scope}
+    % filete superior
+    \fill[icAzul] (current page.north west) rectangle
+      ($(current page.north east)+(0,-0.18)$);
+    \fill[icMagenta] (current page.north west) rectangle
+      ($(current page.north west)+(4.2,-0.18)$);
+  \end{tikzpicture}%
+  \vspace{1.4cm}
+  \begin{minipage}{0.92\textwidth}
+    {\usebeamerfont{title}\usebeamercolor[fg]{title}\inserttitle\par}
+    \vspace{0.45em}
+    {\color{icMagenta}\rule{3.2cm}{2.2pt}\par}
+    \vspace{0.55em}
+    {\usebeamerfont{subtitle}\usebeamercolor[fg]{subtitle}\insertsubtitle\par}
+    \vspace{1.6em}
+    {\usebeamerfont{author}\usebeamercolor[fg]{author}\insertauthor\par}
+    \vspace{0.35em}
+    {\usebeamerfont{institute}\usebeamercolor[fg]{institute}\insertinstitute\par}
+    \vspace{0.35em}
+    {\usebeamerfont{date}\usebeamercolor[fg]{date}\insertdate\par}
+  \end{minipage}
+}
+
+% ---------- divisória automática de seção ---------------------------------
+\AtBeginSection[]{{%
+  \setbeamercolor{background canvas}{bg=icAzul}%
+  \begin{frame}[plain, noframenumbering]
+    \begin{tikzpicture}[remember picture, overlay]
+      \begin{scope}[shift={($(current page.south east)+(-3.2,0.9)$)}]
+        \foreach \j in {1,2,3}
+          \node[circle, draw=white, opacity=0.16, minimum size=0.5cm]
+            (sd-a-\j) at (0, \j*0.85) {};
+        \foreach \j in {1,2}
+          \node[circle, draw=white, opacity=0.16, minimum size=0.5cm]
+            (sd-b-\j) at (1.3, \j*0.85+0.42) {};
+        \foreach \i in {1,2,3} \foreach \j in {1,2}
+          \draw[white, opacity=0.12] (sd-a-\i) -- (sd-b-\j);
+      \end{scope}
+    \end{tikzpicture}%
+    \vfill
+    {\color{icDourado}\bfseries\large PARTE \insertsectionnumber\par}
+    \vspace{0.5em}
+    {\color{white}\bfseries\huge \insertsection\par}
+    \vspace{0.6em}
+    {\color{icAzulClaro!40!white}\rule{2.6cm}{2pt}\par}
+    \vfill
+  \end{frame}
+}}
+
+% ============================================================
+% CAIXAS TEMÁTICAS
+% ============================================================
+\tcbset{
+  iccaixa/.style={
+    enhanced, sharp corners=all, frame hidden, boxrule=0pt,
+    colback=#1!7!white,
+    borderline west={2.8pt}{0pt}{#1},
+    left=6pt, right=6pt, top=3.5pt, bottom=3.5pt,
+    coltitle=#1!72!black, fonttitle=\bfseries,
+    detach title,
+    before upper={\ifdefempty{\tcbtitletext}{}{\tcbtitle\par\vspace{1.5pt}}},
+    before skip=4pt, after skip=4pt,
+  }
+}
+
+\newtcolorbox{defbox}[2][]{iccaixa=icCiano,
+  title={Definição\notblank{#2}{ — #2}{}}, #1}
+\newtcolorbox{teobox}[2][]{iccaixa=icAzulClaro,
+  title={Teorema\notblank{#2}{ — #2}{}}, #1}
+\newtcolorbox{algbox}[2][]{iccaixa=icAzul,
+  title={Algoritmo\notblank{#2}{ — #2}{}}, #1}
+\newtcolorbox{exbox}[2][]{iccaixa=icMagenta,
+  title={Exercício\notblank{#2}{ #2}{}}, #1}
+\newtcolorbox{ideiabox}[1][]{iccaixa=icDourado, title={Intuição}, #1}
+\newtcolorbox{alertabox}[1][]{iccaixa=icCarmim, title={Cuidado}, #1}
+\newtcolorbox{quizbox}[1][]{iccaixa=icDourado,
+  colback=icFundoQuiz, title={Para discutir em aula}, #1}
+\newtcolorbox{respbox}[1][]{iccaixa=icVerde, title={Fechamento}, #1}
+
+\newcommand{\opcoes}[1]{{\small\itshape\color{icCinza}#1}}
+
+% ============================================================
+% MACROS MATEMÁTICAS
+% ============================================================
+% gerais
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\D}{\mathcal{D}}
+\newcommand{\Hip}{\mathcal{H}}
+\newcommand{\vet}[1]{\bm{#1}}
+\newcommand{\vx}{\vet{x}}
+\newcommand{\vw}{\vet{w}}
+\newcommand{\vy}{\vet{y}}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\deriv}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\defeq}{\coloneqq}
+% redes neurais
+\newcommand{\ativ}{\varphi}
+\newcommand{\sig}{\sigma}
+\DeclareMathOperator{\relu}{ReLU}
+\DeclareMathOperator{\soft}{softmax}
+\newcommand{\erro}{E}
+\newcommand{\taxa}{\eta}
+\newcommand{\campo}{v}
+\newcommand{\pesoij}[2]{w_{#1#2}}
+% computação evolutiva
+\newcommand{\apt}{f}
+\newcommand{\pop}{P}
+\newcommand{\geracao}{t}
+\newcommand{\indiv}[1]{\vet{c}^{(#1)}}
+\newcommand{\pcruz}{p_c}
+\newcommand{\pmut}{p_m}
+% sistemas nebulosos
+\newcommand{\fset}[1]{\tilde{#1}}
+\newcommand{\pert}[2]{\mu_{#1}\!\left(#2\right)}
+\newcommand{\tnorm}{\top}
+\newcommand{\snorm}{\bot}
+% realce e anotação
+\newcommand{\mdestaque}[2]{%
+  \setlength{\fboxsep}{3.5pt}%
+  \fcolorbox{#1}{#1!8}{$\displaystyle #2$}}
+\newcommand{\termo}[2]{%
+  \underbrace{#1}_{\mathclap{\text{\scriptsize\color{icCinza}#2}}}}
+
+% ============================================================
+% ESTILOS E DIAGRAMAS TIKZ
+% ============================================================
+\tikzset{
+  neuronio/.style={circle, draw=icAzul, thick, fill=icAzul!12,
+    minimum size=0.85cm, inner sep=1pt, font=\small},
+  neuronio entrada/.style={neuronio, draw=icCiano, fill=icCiano!12},
+  neuronio saida/.style={neuronio, draw=icMagenta, fill=icMagenta!12},
+  neuronio destacado/.style={neuronio, draw=icDourado, fill=icDourado!18},
+  sinapse/.style={->, >={Stealth[length=5pt]}, icCinza!85, semithick},
+  sinapse destac/.style={->, >={Stealth[length=6pt]}, icMagenta, very thick},
+  peso/.style={fill=white, inner sep=1.5pt, font=\scriptsize, midway},
+  bloco/.style={draw=icAzul, thick, fill=icAzul!8, rounded corners=2pt,
+    align=center, minimum height=0.85cm, inner sep=6pt, font=\small},
+  bloco evol/.style={bloco, draw=icEvol, fill=icEvol!10},
+  bloco fuzzy/.style={bloco, draw=icFuzzy, fill=icFuzzy!10},
+  fluxo/.style={->, >={Stealth[length=6pt]}, thick, icCinza},
+}
+
+% ---------- \perceptron ---------------------------------------------------
+\newcommand{\perceptron}{%
+\begin{tikzpicture}
+  \node[neuronio entrada] (px1) at (0, 1.9)  {$x_1$};
+  \node[neuronio entrada] (px2) at (0, 0.95) {$x_2$};
+  \node                   (pxd) at (0, 0.18) {$\vdots$};
+  \node[neuronio entrada] (pxn) at (0,-0.75) {$x_N$};
+  \node[circle, draw=icCinza, fill=icFundo, minimum size=0.6cm,
+        font=\small] (pb) at (2.1, 2.15) {$1$};
+  \node[neuronio, minimum size=1cm] (psoma) at (2.1, 0.55) {$\Sigma$};
+  \node[neuronio, minimum size=1cm] (pativ) at (3.8, 0.55) {$\ativ(\cdot)$};
+  \node (pout) at (5.5, 0.55) {$\hat{y}$};
+  \draw[sinapse] (px1) -- node[peso, pos=0.45] {$w_1$} (psoma);
+  \draw[sinapse] (px2) -- node[peso, pos=0.45] {$w_2$} (psoma);
+  \draw[sinapse] (pxn) -- node[peso, pos=0.45] {$w_N$} (psoma);
+  \draw[sinapse] (pb)  -- node[peso, pos=0.45] {$b$}   (psoma);
+  \draw[sinapse] (psoma) -- node[peso, above] {$\campo$} (pativ);
+  \draw[sinapse destac] (pativ) -- (pout);
+\end{tikzpicture}}
+
+% ---------- \mlp{n1,n2,...} ------------------------------------------------
+\makeatletter
+\newcommand{\mlp}[1]{%
+\begin{tikzpicture}[x=1.7cm, y=0.85cm]
+  % conta as camadas
+  \xdef\ic@nlayers{0}%
+  \foreach \n in {#1} {\xdef\ic@nlayers{\the\numexpr\ic@nlayers+1\relax}}%
+  % nós
+  \foreach \n [count=\li] in {#1} {%
+    \pgfmathsetmacro{\ic@off}{(\n-1)/2}%
+    \ifnum\li=1
+      \foreach \j in {1,...,\n}
+        \node[neuronio entrada, minimum size=0.62cm]
+          (n-\li-\j) at (\li, {\ic@off-(\j-1)}) {};
+    \else
+      \ifnum\li=\ic@nlayers\relax
+        \foreach \j in {1,...,\n}
+          \node[neuronio saida, minimum size=0.62cm]
+            (n-\li-\j) at (\li, {\ic@off-(\j-1)}) {};
+      \else
+        \foreach \j in {1,...,\n}
+          \node[neuronio, minimum size=0.62cm]
+            (n-\li-\j) at (\li, {\ic@off-(\j-1)}) {};
+      \fi
+    \fi
+  }%
+  % arestas
+  \foreach \n [count=\li, remember=\n as \ic@nprev (initially 0),
+               remember=\li as \ic@lprev (initially 0)] in {#1} {%
+    \ifnum\li>1
+      \foreach \i in {1,...,\ic@nprev}
+        \foreach \j in {1,...,\n}
+          \draw[icCinza!60, semithick] (n-\ic@lprev-\i) -- (n-\li-\j);
+    \fi
+  }%
+\end{tikzpicture}}
+\makeatother
+
+% ---------- \cicloevolutivo --------------------------------------------------
+\newcommand{\cicloevolutivo}{%
+\begin{tikzpicture}[node distance=0.9cm and 1.5cm]
+  \node[bloco evol] (pop)  {População $\pop(\geracao)$};
+  \node[bloco evol, right=of pop]  (aval) {Avaliação\\ (aptidão $\apt$)};
+  \node[bloco evol, below=of aval] (sel)  {Seleção};
+  \node[bloco evol, left=of sel]   (var)  {Cruzamento $\pcruz$\\ Mutação $\pmut$};
+  \node[bloco, right=1.3cm of aval] (fim) {Critério de\\ parada};
+  \draw[fluxo] (pop)  -- (aval);
+  \draw[fluxo] (aval) -- (sel);
+  \draw[fluxo] (sel)  -- (var);
+  \draw[fluxo] (var)  -- (pop);
+  \draw[fluxo] (aval) -- (fim);
+\end{tikzpicture}}
+
+% ---------- \fuzzymf ----------------------------------------------------------
+\newcommand{\fuzzymf}{%
+\begin{tikzpicture}[x=1.1cm, y=1.4cm]
+  \draw[->, icCinza] (-0.2,0) -- (4.6,0) node[below] {$x$};
+  \draw[->, icCinza] (0,-0.05) -- (0,1.25) node[left] {$\pert{\fset{A}}{x}$};
+  \draw[icCinza!60] (-0.08,1) node[left, black!70] {\small $1$} -- (4.4,1);
+  \draw[thick, icCiano]   (0,1) -- (1.1,1) -- (2.2,0);
+  \draw[thick, icDourado] (1.1,0) -- (2.2,1) -- (3.3,0);
+  \draw[thick, icMagenta] (2.2,0) -- (3.3,1) -- (4.3,1);
+  \node[icCiano,   font=\small] at (0.55,1.12) {baixo};
+  \node[icDourado, font=\small] at (2.2,1.12)  {médio};
+  \node[icMagenta, font=\small] at (3.85,1.12) {alto};
+\end{tikzpicture}}
+
+\mode<all>
+\endinput

@@ -1,0 +1,106 @@
+%% ============================================================
+%% AULA 12 — Aplicações: interpolação e campos neurais
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): item 2 — aplicações: interpolação.
+%%
+%% Compilar:  latexmk -xelatex aula12.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 12 — Interpolação]{Aula 12: Aplicações — interpolação e campos neurais}
+\subtitle[GBC073 — Inteligência Computacional]{Aproximação universal na prática \textbullet\ campos neurais \textbullet\ PINNs}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{Do teorema da aproximação universal à prática}
+    \item<2-> \textbf{Campos neurais: coordenadas como entrada}
+    \item<3-> \textbf{PINNs: a física como resíduo}
+    \item<4-> \textbf{Quando a rede é o modelo do mundo}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Do teorema à prática}
+
+\begin{frame}{Do teorema da aproximação universal à prática}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Aula 2 provou: a rede \emph{pode} representar quase qualquer função.
+    \item Interpolação é o teste mais direto: passar pelos pontos dados e
+          generalizar entre eles.
+    \item Redes interpolam suavemente, sem malha — e em dimensão alta.
+    \item A ficha da disciplina pede exatamente isso: ``aplicações em
+          interpolação''.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Campos neurais}
+
+\begin{frame}{Campos neurais: coordenadas como entrada}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Um campo neural (NeRF e família): a rede aprende uma função do
+          espaço — a coordenada entra, a intensidade sai.
+    \item Imagens, volumes 3D e cenas viram uma única rede contínua.
+    \item O modelo é a memória: não se armazena o sinal, armazena-se a função.
+    \item A coordenada sozinha, sem truque de codificação, subajusta — detalhe
+          prático essencial.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{PINNs}
+
+\begin{frame}{PINNs: a física como resíduo}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Redes informadas pela física (PINNs): a equação diferencial vira
+          termo de perda.
+    \item O resíduo da equação é avaliado em pontos amostrados do domínio.
+    \item Sem malha, sem discretização — a rede é a solução.
+    \item Fronteiras e condições iniciais entram como termos de perda
+          adicionais.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{A rede como modelo do mundo}
+
+\begin{frame}{Quando a rede é o modelo do mundo}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Do ajuste de curvas ao modelo de uma cena, de um material, de um
+          sistema dinâmico.
+    \item A rede como aproximador universal de \emph{processos}, não só de
+          tabelas.
+    \item Limites: extrapolação fora do domínio amostrado é aposta, não
+          garantia.
+  \end{itemize}
+  \begin{quizbox}
+    Um campo neural armazena o sinal discretizado na memória da GPU, como um
+    arquivo de imagem.
+
+    \smallskip
+    \opcoes{Verdadeiro \;/\; Falso}
+  \end{quizbox}
+\end{frame}
+
+\end{document}

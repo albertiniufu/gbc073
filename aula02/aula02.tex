@@ -1,0 +1,846 @@
+%% ============================================================
+%% GBC073 — Inteligência Computacional
+%% Aula 2: O que uma rede consegue representar
+%%
+%% Traduzida e adaptada da Lecture 2 ("Neural Networks: What can
+%% a network represent") de 11-785 — Introduction to Deep Learning,
+%% Bhiksha Raj, Carnegie Mellon University, edição Spring 2026.
+%%
+%% Compilar:  latexmk -xelatex aula02.tex
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+% ------------------------------------------------------------ código
+% O tema não traz ambiente de código; este bloco define um na paleta.
+% Se você promover isto ao .sty, apague daqui. (Mesmo estilo da aula 0.)
+\usepackage{listings}
+\lstdefinestyle{icpython}{
+  language=Python,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{icAzul}\bfseries,
+  commentstyle=\color{icCinza}\itshape,
+  stringstyle=\color{icVerde},
+  emph={torch,nn,optim,Linear,ReLU,Sequential,tensor,linspace,randint,
+        parameters,backward,step,zero_grad,Adam,unsqueeze,sign,sin,sum,mean},
+  emphstyle=\color{icMagenta},
+  showstringspaces=false,
+  numbers=none,
+  frame=leftline,
+  framerule=1.6pt,
+  rulecolor=\color{icAzul!35},
+  framexleftmargin=5pt,
+  xleftmargin=7pt,
+  backgroundcolor=\color{icAzul!5},
+  aboveskip=0.4em, belowskip=0.2em,
+  columns=fullflexible,
+  keepspaces=true,
+}
+\lstset{style=icpython}
+% ATENÇÃO: os comentários do código estão sem acentuação de propósito —
+% listings + XeLaTeX quebram com UTF-8 acentuado dentro de lstlisting.
+
+\title[Aula 2 — O que uma rede representa]{Aula 2: O que uma rede consegue representar}
+\subtitle[GBC073 — Inteligência Computacional]{Funções booleanas \textbullet\ Classificadores \textbullet\ Aproximação universal \textbullet\ Profundidade}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia\\[2pt]
+{\footnotesize Traduzida e adaptada da Lecture 2 de 11-785 (CMU, Spring 2026), Bhiksha Raj}}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{O problema desta aula: representação}
+
+  \begin{center}
+    {\small
+    \tikz[baseline]{\node[bloco, fill=icDourado!20, draw=icDourado]{\textbf{modelo}};}
+    \;$\to$\;
+    \tikz[baseline]{\node[bloco, fill=icCinza!10, draw=icCinza]{perda};}
+    \;$\to$\;
+    \tikz[baseline]{\node[bloco, fill=icCinza!10, draw=icCinza]{otimizador};}
+    \;$\to$\;
+    \tikz[baseline]{\node[bloco, fill=icCinza!10, draw=icCinza]{dados};}}
+  \end{center}
+
+  \smallskip
+  Antes de treinar (próxima aula): existe algum conjunto de pesos que
+  computa a função desejada?
+
+  \medskip
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      Roteiro:
+      \begin{itemize}\setlength{\itemsep}{0.2ex}
+        \item MLPs como funções \textbf{booleanas}
+        \item MLPs como \textbf{classificadores}
+        \item MLPs como \textbf{aproximadores} de funções contínuas
+        \item Em cada parte: o papel da \alert{profundidade}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{ideiabox}
+        Uma camada oculta representa tudo, mas pode exigir largura
+        \alert{exponencial}. Profundidade reduz esse custo.
+      \end{ideiabox}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{MLPs como funções booleanas universais}
+
+\begin{frame}{O neurônio de limiar é uma porta lógica}
+
+  Com entradas em $\{0,1\}$ e degrau, escolher $\vw$ e o limiar $T$ dá as
+  portas clássicas — e a de maioria:
+
+  \smallskip
+  \begin{columns}[T]
+    \begin{column}{0.31\textwidth}
+      \begin{center}
+        \begin{tikzpicture}[node distance=4mm]
+          \node[neuronio entrada] (a) {$X$};
+          \node[neuronio entrada, below=of a] (b) {$Y$};
+          \node[neuronio saida, right=10mm of $(a)!0.5!(b)$] (o) {$\ge 2$};
+          \draw[sinapse] (a) -- node[peso]{1} (o);
+          \draw[sinapse] (b) -- node[peso]{1} (o);
+        \end{tikzpicture}\\[1pt]
+        {\small\color{icCinza} AND: limiar $2$}
+      \end{center}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{center}
+        \begin{tikzpicture}[node distance=4mm]
+          \node[neuronio entrada] (a) {$X$};
+          \node[neuronio entrada, below=of a] (b) {$Y$};
+          \node[neuronio saida, right=10mm of $(a)!0.5!(b)$] (o) {$\ge 1$};
+          \draw[sinapse] (a) -- node[peso]{1} (o);
+          \draw[sinapse] (b) -- node[peso]{1} (o);
+        \end{tikzpicture}\\[1pt]
+        {\small\color{icCinza} OR: limiar $1$}
+      \end{center}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{center}
+        \begin{tikzpicture}[node distance=4mm]
+          \node[neuronio entrada] (a) {$X_1$};
+          \node[neuronio entrada, below=of a] (b) {$X_N$};
+          \node[neuronio saida, right=10mm of $(a)!0.5!(b)$] (o) {$\ge K$};
+          \draw[sinapse] (a) -- node[peso]{1} (o);
+          \draw[sinapse, dotted] (b) -- node[peso]{1} (o);
+        \end{tikzpicture}\\[1pt]
+        {\small\color{icCinza} maioria: $K$ de $N$}
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \smallskip
+  \begin{ideiabox}
+    A porta de maioria custa \textbf{um} neurônio; em circuitos AND/OR/NOT de
+    profundidade fixa, custa tamanho exponencial. Neurônios de limiar são
+    portas mais fortes que as booleanas.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{XOR exige camada oculta}
+
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \begin{center}
+        \begin{tikzpicture}[node distance=6mm and 10mm]
+          \node[neuronio entrada] (x) {$X$};
+          \node[neuronio entrada, below=9mm of x] (y) {$Y$};
+          \node[neuronio, right=of x] (h1) {$\ge 1$};
+          \node[neuronio, right=of y] (h2) {$\ge 2$};
+          \node[neuronio saida, right=11mm of $(h1)!0.5!(h2)$] (o) {$\ge 1$};
+          \draw[sinapse] (x) -- node[peso]{1} (h1);
+          \draw[sinapse] (x) -- node[peso, pos=0.25]{1} (h2);
+          \draw[sinapse] (y) -- node[peso, pos=0.25]{1} (h1);
+          \draw[sinapse] (y) -- node[peso]{1} (h2);
+          \draw[sinapse destac] (h1) -- node[peso]{1} (o);
+          \draw[sinapse destac] (h2) -- node[peso]{$-1$} (o);
+        \end{tikzpicture}\\[2pt]
+        {\small\color{icCinza} XOR $=$ OR \textbf{e não} AND: 3 neurônios}
+      \end{center}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{alertabox}
+        Da aula 0: um único perceptron não computa o XOR — as classes não são
+        linearmente separáveis.
+      \end{alertabox}
+
+      \smallskip
+      \begin{itemize}\setlength{\itemsep}{0.2ex}
+        \item A camada oculta re-representa a entrada (computa OR e AND)
+        \item Para a saída, o problema fica linear
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Uma camada oculta representa qualquer tabela-verdade}
+
+  Toda função booleana é uma tabela; toda tabela vira \emph{forma normal
+  disjuntiva}: um OR de termos AND, um termo por linha com saída 1.
+
+  \[
+    Y \;=\;
+    \termo{\bar{X}_1 \bar{X}_2 X_3 X_4 \bar{X}_5}{um neurônio AND}
+    \;+\; \bar{X}_1 X_2 \bar{X}_3 X_4 X_5
+    \;+\; \cdots \;+\;
+    \termo{X_1 X_2 \bar{X}_3 \bar{X}_4 X_5}{um neurônio por linha}
+  \]
+
+  \smallskip
+  Camada oculta $=$ os ANDs; saída $=$ o OR.
+
+  \medskip
+  \begin{teobox}{MLP como função booleana universal}
+    Uma MLP com uma camada oculta de neurônios de limiar representa
+    exatamente qualquer função booleana de $N$ variáveis.
+  \end{teobox}
+
+  \smallskip
+  \begin{center}
+    {\color{icCinza}\small A pergunta que resta: quantos neurônios?}
+  \end{center}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{O pior caso: paridade}
+  \framesubtitle{O XOR de $N$ variáveis é o mapa de Karnaugh que não se reduz}
+
+  \begin{columns}[T]
+    \begin{column}{0.36\textwidth}
+      \begin{center}
+        \begin{tikzpicture}[x=5.5mm, y=5.5mm]
+          \foreach \i in {0,...,3} \foreach \j in {0,...,3} {
+            \pgfmathparse{mod(\i+\j,2)}
+            \ifdim\pgfmathresult pt>0pt
+              \fill[icMagenta!70] (\i,\j) rectangle ++(1,1);
+            \else
+              \fill[icFundo] (\i,\j) rectangle ++(1,1);
+            \fi}
+          \draw[icCinza!60, step=5.5mm] (0,0) grid (4,4);
+        \end{tikzpicture}\\[2pt]
+        {\small\color{icCinza} nenhum agrupamento possível}
+      \end{center}
+    \end{column}
+    \begin{column}{0.6\textwidth}
+      Metade das $2^N$ linhas tem saída 1; nenhum AND cobre duas delas.
+
+      \smallskip
+      \begin{itemize}\setlength{\itemsep}{0.3ex}
+        \item \textbf{Uma camada oculta:} $2^{N-1}$ neurônios
+        \item \textbf{Árvore de XORs:} $3(N-1)$ neurônios,
+              em $2\log_2 N$ camadas
+      \end{itemize}
+
+      \medskip
+      \mdestaque{icMagenta}{\textstyle 2^{N-1} \;\longrightarrow\; 3(N-1)}
+
+      \smallskip
+      {\small Reduzir a profundidade abaixo do mínimo reverte o ganho: a
+      camada $K$ passa a precisar de $\mathcal{O}(2^{cN})$ neurônios.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Limites do argumento}
+
+  \begin{alertabox}
+    \textbf{Shannon:} quase toda função booleana de $N$ variáveis exige mais
+    de $2^N/N$ portas, \alert{independentemente da profundidade}.
+  \end{alertabox}
+
+  \smallskip
+  \begin{itemize}\setlength{\itemsep}{0.25ex}
+    \item Profundidade só comprime funções com estrutura
+          \emph{composicional}, como a paridade
+    \item Hipótese do \emph{deep learning}: visão, fala e linguagem têm
+          essa estrutura
+    \item O custo real é o número de \textbf{conexões} (pesos), não de
+          neurônios — exponencial em neurônios é pior ainda em pesos
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Pergunta para conduzir em aula}
+
+  \begin{quizbox}
+    Uma camada oculta representa qualquer função booleana. Logo,
+    profundidade não muda o que a rede pode computar.
+
+    \smallskip
+    \opcoes{Verdadeiro \;/\; Falso}
+  \end{quizbox}
+
+  \pause
+
+  \begin{respbox}
+    \textbf{Falso no que importa.} O conjunto de funções é o mesmo, mas o
+    custo não: achatar pode inflar a largura exponencialmente (paridade:
+    $3(N-1) \to 2^{N-1}$). Expressividade se mede \alert{sob restrição de
+    tamanho}.
+  \end{respbox}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{MLPs como classificadores universais}
+
+\begin{frame}{No contínuo, o perceptron é um hiperplano}
+
+  \begin{columns}[T]
+    \begin{column}{0.44\textwidth}
+      \begin{center}
+        \begin{tikzpicture}[x=9mm, y=9mm]
+          \fill[icCiano!12] (0,2.6) -- (3.4,0.2) -- (3.4,3.4) -- (0,3.4) -- cycle;
+          \draw[-{Stealth}] (0,0) -- (3.6,0) node[right, font=\scriptsize] {$x_1$};
+          \draw[-{Stealth}] (0,0) -- (0,3.6) node[above, font=\scriptsize] {$x_2$};
+          \draw[icAzul, very thick] (0,2.6) -- (3.4,0.2)
+            node[pos=0.8, above right, font=\scriptsize, color=icAzul]
+            {$\vw^{\!\top}\vx + b = 0$};
+          \node[font=\scriptsize, color=icCiano!60!black] at (2.5,2.7) {$\hat{y}=1$};
+          \node[font=\scriptsize, color=icCinza] at (0.9,0.6) {$\hat{y}=0$};
+        \end{tikzpicture}
+      \end{center}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \begin{defbox}{Classificador linear}
+        Com entradas reais, o neurônio de limiar dispara em um semiespaço:
+        $\hat{y} = \mathbf{1}[\vw^{\!\top}\vx + b \ge 0]$. A fronteira é um
+        hiperplano em $\R^n$.
+      \end{defbox}
+
+      \smallskip
+      \begin{itemize}\setlength{\itemsep}{0.2ex}
+        \item As portas booleanas são este desenho com entradas em
+              $\{0,1\}^2$
+        \item Pergunta: que regiões de decisão uma rede de hiperplanos
+              desenha?
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{AND de hiperplanos, OR de polígonos}
+
+  \begin{columns}[T]
+    \begin{column}{0.40\textwidth}
+      \begin{center}
+        \begin{tikzpicture}[x=7mm, y=7mm]
+          \fill[icMagenta!18] (1.0,0.4) -- (2.8,0.2) -- (3.4,1.6) -- (2.2,2.8)
+            -- (0.8,2.2) -- cycle;
+          \draw[icAzul, thick] (0.3,0.9) -- (3.6,0.05);
+          \draw[icAzul, thick] (2.5,-0.2) -- (3.7,2.4);
+          \draw[icAzul, thick] (3.7,0.9) -- (1.6,3.2);
+          \draw[icAzul, thick] (3.0,3.0) -- (0.2,1.6);
+          \draw[icAzul, thick] (0.3,2.9) -- (1.4,-0.2);
+          \node[font=\scriptsize, color=icMagenta!80!black] at (2.0,1.4) {AND};
+        \end{tikzpicture}\\[1pt]
+        {\small\color{icCinza} 5 hiperplanos $\to$ pentágono}
+      \end{center}
+    \end{column}
+    \begin{column}{0.56\textwidth}
+      A construção clássica tem três camadas:
+      \begin{itemize}\setlength{\itemsep}{0.25ex}
+        \item<1-> \textbf{Camada 1} — hiperplanos: um neurônio por lado
+        \item<2-> \textbf{Camada 2} — AND: interseção $\to$ polítopo convexo
+        \item<3-> \textbf{Camada 3} — OR: união de polítopos $\to$ região
+              \alert{arbitrária}, até desconexa e com buracos
+      \end{itemize}
+
+      \smallskip
+      \onslide<3->{%
+      \begin{ideiabox}
+        Qualquer região pode ser ladrilhada por polígonos convexos: duas
+        camadas ocultas desenham qualquer fronteira de decisão.
+      \end{ideiabox}}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{O truque do cilindro: uma camada oculta também basta}
+
+  Some os $N$ lados de um polígono de muitos lados, sem AND:
+
+  \[
+    \sum_{i=1}^{N} y_i \;\approx\;
+    \begin{cases}
+      N   & \text{dentro do polígono}\\[2pt]
+      N/2 & \text{fora, em quase todo lugar}
+    \end{cases}
+    \qquad (N \to \infty:\ \text{um \alert{cilindro}})
+  \]
+
+  \begin{itemize}\setlength{\itemsep}{0.25ex}
+    \item Subtraia $N/2$: o cilindro vale $N/2$ dentro, $0$ fora
+    \item Some cilindros centrados onde quiser e limiarize: qualquer região
+    \item Tudo em uma camada oculta $\Rightarrow$ MLPs rasas são
+          classificadores universais
+  \end{itemize}
+
+  \smallskip
+  \begin{alertabox}
+    Cada cilindro exige $N \to \infty$ neurônios. A construção profunda
+    (retas $\to$ AND $\to$ OR) faz o mesmo com neurônios finitos.
+  \end{alertabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Profundidade, de novo: o tabuleiro de 16 retas}
+
+  Pior caso 2D: retas em grade, regiões alternadas (uma paridade contínua).
+  Neurônios para representar exatamente:
+
+  \medskip
+  \begin{center}
+    \small
+    \begin{tabular}{lcc}
+      & \textbf{rede rasa (2 camadas)} & \textbf{rede profunda (árvore XOR)}\\[2pt]
+      \hline\\[-8pt]
+      grade $4\times 4$ (16 retas)   & 57 neurônios  & 46 neurônios\\
+      grade $8\times 8$ (64 retas)   & 609 neurônios & 190 neurônios\\
+      regra geral ($N$ retas)        & $\mathcal{O}(N^2)$ & $\mathcal{O}(N)$\\
+    \end{tabular}
+  \end{center}
+
+  \medskip
+  \begin{itemize}\setlength{\itemsep}{0.25ex}
+    \item Em 2D o custo é quadrático porque há só 2 dimensões independentes
+    \item Em dimensão $D$, o pior caso raso cresce como
+          $\mathcal{O}\!\left(N^D/(D-1)!\right)$: exponencial na dimensão
+    \item A rede profunda depende só de $N$, o número de detectores lineares
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{MLPs como aproximadores universais}
+
+\begin{frame}{Um pulso com dois degraus; uma função com muitos pulsos}
+
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \begin{center}
+        \begin{tikzpicture}[x=9mm, y=7mm]
+          \draw[-{Stealth}] (0,0) -- (4.2,0) node[right, font=\scriptsize] {$x$};
+          \draw[-{Stealth}] (0,-0.3) -- (0,2.2);
+          \draw[icCiano, thick] (0,0) -- (1.2,0) -- (1.2,1) -- (4.0,1);
+          \draw[icMagenta, thick] (0,0.06) -- (2.4,0.06) -- (2.4,1.06) -- (4.0,1.06);
+          \draw[icAzul, very thick] (0,-0.12) -- (1.2,-0.12) -- (1.2,0.88)
+            -- (2.4,0.88) -- (2.4,-0.12) -- (4.0,-0.12);
+          \node[font=\scriptsize, color=icCiano] at (3.4,1.35) {$u(x-T_1)$};
+          \node[font=\scriptsize, color=icMagenta] at (1.0,1.35) {$-u(x-T_2)$};
+          \node[font=\scriptsize, color=icAzul] at (1.8,0.55) {pulso};
+        \end{tikzpicture}\\[2pt]
+        {\small\color{icCinza} dois neurônios $+$ soma $=$ um pulso}
+      \end{center}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{algbox}{Aproximação por pulsos (1D)}
+        \begin{itemize}\setlength{\itemsep}{0.2ex}
+          \item Fatie o domínio em janelas $[T_i, T_{i+1}]$
+          \item Um pulso por janela, escalado por $h_i \approx f(T_i)$
+          \item Some: $\hat{f}(x) = \sum_i h_i\,\text{pulso}_i(x)$
+        \end{itemize}
+      \end{algbox}
+
+      \smallskip
+      Janelas mais finas $\Rightarrow$ erro arbitrariamente pequeno.
+      Em $\R^n$, troque pulsos por cilindros.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Demonstração: enunciado e estratégia}
+
+  \begin{teobox}{Versão que provamos (1D, sigmoide)}
+    Sejam $f\colon [a,b] \to \R$ contínua e $\epsilon > 0$. Existem $K$,
+    coeficientes $c_i$ e limiares $T_i$ tais que
+    \[
+      g(x) = \sum_{i} c_i\, \sig\big(k(x - T_i)\big)
+      \qquad\text{satisfaz}\qquad
+      \sup_{x \in [a,b]} \abs{f(x) - g(x)} < \epsilon.
+    \]
+  \end{teobox}
+
+  \smallskip
+  Três passos, com orçamento de erro $\epsilon/2 + \epsilon/2$:
+
+  \begin{enumerate}\setlength{\itemsep}{0.25ex}
+    \item Continuidade uniforme $\to$ partição de $[a,b]$ em janelas curtas
+    \item Rede de \textbf{degraus} constante por janela: erro $\le \epsilon/2$
+    \item Degrau $\to$ sigmoide com inclinação $k$ grande: erro extra
+          $< \epsilon/2$
+  \end{enumerate}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Passo 1: continuidade uniforme dá a partição}
+
+  \begin{defbox}{Continuidade uniforme (Heine--Cantor)}
+    $f$ contínua no compacto $[a,b]$ é uniformemente contínua: para todo
+    $\epsilon > 0$ existe $\delta > 0$ tal que
+    $\abs{x - x'} < \delta \Rightarrow \abs{f(x) - f(x')} < \epsilon/2$.
+  \end{defbox}
+
+  \smallskip
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item O $\delta$ vale para o intervalo \textbf{inteiro} — é isso que o
+          compacto compra; em $\R$ todo, $f(x)=x^2$ já não teria $\delta$ único
+    \item Particione: $a = T_0 < T_1 < \cdots < T_K = b$ com
+          $T_{i+1} - T_i < \delta$, ou seja, $K = \lceil (b-a)/\delta \rceil$
+          janelas
+    \item Dentro de cada janela, $f$ varia menos que $\epsilon/2$
+  \end{itemize}
+
+  \smallskip
+  \mdestaque{icAzul}{\textstyle
+    x \in [T_i, T_{i+1}) \;\Rightarrow\; \abs{f(x) - f(T_i)} < \epsilon/2}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Passo 2: a rede de degraus erra menos que $\epsilon/2$}
+
+  Com o pulso do slide anterior,
+  $\text{pulso}_i(x) = u(x - T_i) - u(x - T_{i+1})$, defina
+  \[
+    g_u(x) \;=\; \sum_{i=0}^{K-1} f(T_i)\, \text{pulso}_i(x).
+  \]
+
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item Os pulsos não se sobrepõem: em $[T_i, T_{i+1})$ vale
+          $g_u(x) = f(T_i)$, constante
+    \item Pelo Passo 1: $\abs{f(x) - g_u(x)} = \abs{f(x) - f(T_i)} <
+          \epsilon/2$ em toda janela
+    \item Arquitetura: \textbf{uma} camada oculta com $2K$ degraus e saída
+          linear ($K$ degraus na forma telescópica
+          $g_u = f(T_0) + \sum_i [f(T_i) - f(T_{i-1})]\, u(x - T_i)$)
+  \end{itemize}
+
+  \smallskip
+  \mdestaque{icAzul}{\textstyle \sup_{x \in [a,b]} \abs{f(x) - g_u(x)}
+    \le \epsilon/2}
+
+  \smallskip
+  {\small Se a ativação permitida fosse o degrau, a prova acabaria aqui.}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Passo 3: trocar o degrau pela sigmoide}
+
+  Substitua cada $u(x - T_i)$ por $\sig\big(k(x - T_i)\big)$, com o mesmo
+  $c_i$; chame o resultado de $g$. Note que
+  $\sig(k z) \to u(z)$ quando $k \to \infty$, para todo $z \ne 0$.
+
+  \smallskip
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item \textbf{Longe dos limiares} ($\abs{x - T_i} \ge \Delta$ para todo
+          $i$): cada termo erra no máximo $\sig(-k\Delta)$; o erro total é
+          $\le K \max_i \abs{c_i}\, \sig(-k\Delta)$, que $\to 0$ em $k$.
+          Escolha $k$ que o torne $< \epsilon/2$
+    \item \textbf{Perto de um limiar} $T_i$: $g$ fica, a menos desse mesmo
+          erro, entre os patamares vizinhos $f(T_{i-1})$ e $f(T_i)$ — e
+          ambos distam menos de $\epsilon/2$ de $f(x)$, pois a janela é
+          curta (Passo 1)
+  \end{itemize}
+
+  \smallskip
+  Nos dois casos, $\abs{f(x) - g(x)} < \epsilon/2 + \epsilon/2 = \epsilon$.
+
+  \smallskip
+  \mdestaque{icVerde}{\textstyle \sup_{x \in [a,b]} \abs{f(x) - g(x)} <
+    \epsilon \qquad \blacksquare}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Além de 1D: o que muda na prova geral}
+
+  \begin{itemize}\setlength{\itemsep}{0.35ex}
+    \item \textbf{$\R^n$, construtivo:} troque pulsos por torres —
+          produto de janelas por coordenada. Com uma camada extra (soma dos
+          $2n$ degraus $+$ limiar em $2n - \tfrac{1}{2}$), a torre fica
+          exata; o resto do argumento é idêntico
+    \item \textbf{$\R^n$, uma camada oculta (Cybenko):} prova por
+          contradição, não construtiva. Se o fecho de
+          $\operatorname{span}\{\sig(\vw^{\!\top}\vx + b)\}$ não fosse todo
+          o $C(K)$, Hahn--Banach daria uma medida $\mu \ne 0$ com
+          $\int \sig(\vw^{\!\top}\vx + b)\, d\mu = 0$ para todos $\vw, b$;
+          como a sigmoide é \emph{discriminatória}, isso força $\mu = 0$ —
+          contradição
+    \item \textbf{Leshno et al.:} a ativação só precisa ser
+          \alert{não polinomial} — um polinômio de grau $d$ gera apenas
+          polinômios de grau $d$, e esses não são densos
+  \end{itemize}
+
+  \smallskip
+  {\small A versão construtiva diz o preço ($K \sim (b-a)/\delta$ por
+  dimensão — exponencial em $n$); a de Cybenko diz só que existe.}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{O teorema, e o que ele não diz}
+
+  \begin{teobox}{Aproximação universal (Cybenko 1989; Hornik 1989; Leshno 1993)}
+    Uma rede com uma camada oculta e ativação não polinomial aproxima qualquer
+    função contínua em um compacto de $\R^n$ com precisão arbitrária.
+  \end{teobox}
+
+  \smallskip
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      {\color{icVerde}\bfseries\small O QUE ELE GARANTE}
+      \begin{itemize}\setlength{\itemsep}{0.2ex}
+        \item Existe rede com erro $< \epsilon$, para qualquer $\epsilon$
+        \item Vale para sigmoide, tanh, ReLU, \dots
+        \item A arquitetura MLP não é o gargalo teórico
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      {\color{icCarmim}\bfseries\small O QUE ELE NÃO DIZ}
+      \begin{itemize}\setlength{\itemsep}{0.2ex}
+        \item Quantos neurônios (pode ser astronômico)
+        \item Como achar os pesos
+        \item Nada sobre dados finitos ou generalização
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \smallskip
+  \begin{center}
+    {\color{icCarmim}\small\bfseries Existência $\ne$ aprendizado:}
+    {\small\color{icCinza} otimização e generalização são as próximas semanas.}
+  \end{center}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Leitura moderna: ReLU e regiões lineares}
+
+  Com $\relu(z) = \max(0, z)$, a rede computa uma função \textbf{linear por
+  partes}: o domínio se parte em regiões, afim em cada uma.
+
+  \medskip
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.25ex}
+        \item Expressividade $\approx$ número de regiões
+        \item Largura $n$, profundidade $L$, entrada $n_0$
+              (Montúfar \emph{et al.}, 2014):
+      \end{itemize}
+      \smallskip
+      \mdestaque{icAzul}{\#\text{regiões} \;\ge\;
+        \Omega\!\left(\left(\tfrac{n}{n_0}\right)^{(L-1)\,n_0} n^{\,n_0}\right)}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{ideiabox}
+        Exponencial em $L$, polinomial em $n$: cada camada reusa e
+        recombina as regiões da anterior; largura só acrescenta regiões
+        uma a uma.
+      \end{ideiabox}
+    \end{column}
+  \end{columns}
+
+  \medskip
+  É o resultado da paridade, agora no contínuo.
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}[fragile]{No PyTorch: largura vs.\ profundidade}
+
+\begin{lstlisting}
+import torch, torch.nn as nn
+
+def mlp(larguras):                        # ex.: [1, 64, 64, 1]
+    cam = []
+    for a, b in zip(larguras[:-1], larguras[1:]):
+        cam += [nn.Linear(a, b), nn.ReLU()]
+    return nn.Sequential(*cam[:-1])       # sem ReLU na saida
+
+raso     = mlp([1, 420, 1])               # 1 camada oculta:   1261 parametros
+profundo = mlp([1, 24, 24, 24, 24, 1])    # 4 camadas ocultas: 1873 parametros
+
+x = torch.linspace(-3, 3, 512).unsqueeze(1)
+y = torch.sign(torch.sin(4 * x))          # onda quadrada: muitos "degraus"
+
+for modelo in (raso, profundo):
+    opt = torch.optim.Adam(modelo.parameters(), lr=1e-3)
+    for passo in range(3000):
+        perda = ((modelo(x) - y) ** 2).mean()
+        opt.zero_grad(); perda.backward(); opt.step()
+\end{lstlisting}
+
+  \smallskip
+  {\small Mesmo orçamento de parâmetros. Plote as duas saídas: a profunda
+  ajusta os degraus; a rasa arredonda os cantos.}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}[fragile]{No PyTorch: paridade, raso vs.\ profundo}
+
+\begin{lstlisting}
+N = 12                                     # paridade de 12 bits
+X = torch.randint(0, 2, (8192, N)).float()
+y = (X.sum(1) % 2).unsqueeze(1)            # XOR de todos os bits
+
+raso     = mlp([N, 512, 1])
+profundo = mlp([N, 32, 32, 32, 32, 1])
+
+perda_fn = nn.BCEWithLogitsLoss()
+for modelo in (raso, profundo):
+    opt = torch.optim.Adam(modelo.parameters(), lr=1e-3)
+    for passo in range(5000):
+        perda = perda_fn(modelo(X), y)
+        opt.zero_grad(); perda.backward(); opt.step()
+    acerto = ((modelo(X) > 0) == y.bool()).float().mean()
+\end{lstlisting}
+
+  \smallskip
+  {\small Meça também em dados de teste. A profunda pode compor XORs — a
+  árvore de $3(N-1)$ neurônios, agora encontrada pelo gradiente. Nem sempre
+  encontra: representável $\ne$ treinável.}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Suficiência de arquitetura}
+
+  Uma rede representa a função-alvo só se tiver capacidade: largura
+  \textbf{e} profundidade suficientes. No tabuleiro de 16 retas:
+
+  \begin{itemize}\setlength{\itemsep}{0.25ex}
+    \item Menos de 16 neurônios na 1ª camada $\Rightarrow$ impossível
+          representar o padrão: faltam retas
+    \item Com degrau, a 1ª camada \alert{apaga informação}: regiões
+          distintas colapsam na mesma saída binária, e camadas posteriores
+          não recuperam
+    \item Ativações graduadas (sigmoide, ReLU) passam informação adiante:
+          camadas seguintes corrigem o que a primeira perdeu
+  \end{itemize}
+
+  \smallskip
+  \begin{ideiabox}
+    Segundo argumento contra o degrau, independente do gradiente (aula 0):
+    ele também limita a \emph{representação}.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Curiosidade histórica: redes RBF}
+
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      A unidade de base radial responde à \textbf{distância} de um centro,
+      não a um produto interno:
+      \[
+        z = e^{-\beta \norm{\vx - \vet{\mu}}^2}
+      \]
+      \begin{itemize}\setlength{\itemsep}{0.2ex}
+        \item Um cilindro por unidade — o que custava $N \to \infty$
+              perceptrons
+        \item Parente direto dos métodos de \emph{kernel}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{tcolorbox}[iccaixa=icCinza, title={Por que ficou para trás}]
+        \begin{itemize}\setlength{\itemsep}{0.2ex}
+          \item Local demais: não compõe representações em camadas
+          \item Escala mal com a dimensão da entrada
+          \item A resposta por similaridade reaparece na \emph{atenção}
+                (fim do semestre)
+        \end{itemize}
+      \end{tcolorbox}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Pergunta para conduzir em aula}
+
+  \begin{quizbox}
+    Pelo teorema da aproximação universal, uma rede rasa larga o bastante,
+    treinada com dados suficientes, aprende qualquer função.
+
+    \smallskip
+    \opcoes{Verdadeiro \;/\; Falso}
+  \end{quizbox}
+
+  \pause
+
+  \begin{respbox}
+    \textbf{Falso.} O teorema garante que a rede existe; não garante que o
+    gradiente a encontra, nem que dados finitos a selecionam. Representar,
+    otimizar e generalizar são três problemas distintos — esta aula tratou
+    só do primeiro.
+  \end{respbox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Resumo}
+
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.35ex}
+        \item MLPs são universais: funções booleanas, classificadores e
+              aproximadores — mesmo com uma camada oculta
+        \item A versão rasa pode custar largura exponencial (paridade,
+              dimensão da entrada)
+        \item Profundidade: $\mathcal{O}(2^N) \to \mathcal{O}(N)$ na
+              paridade; regiões lineares exponenciais em $L$ na ReLU
+        \item Capacidade insuficiente $\Rightarrow$ não representa;
+              ativações graduadas preservam informação entre camadas
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{tcolorbox}[iccaixa=icVerde, title={Próxima aula}]
+        Treinamento: aprendizado como minimização de risco empírico e
+        descida de gradiente.
+      \end{tcolorbox}
+      \smallskip
+      {\small\color{icCinza} Fonte: Lecture 2, 11-785 (CMU S26).
+      Leitura: Nielsen, cap.\ 4.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Para a próxima aula}
+
+  \begin{exbox}{1 --- Construção}
+    (a)~Desenhe a MLP de limiar (pesos e limiares) que computa a paridade de
+    4 bits como árvore de XORs; conte neurônios e pesos.
+    (b)~Escreva a DNF da mesma função e conte os neurônios da versão de uma
+    camada oculta. (c)~Repita as contagens para $N = 20$ bits.
+  \end{exbox}
+
+  \begin{exbox}{2 --- Código}
+    Rode o experimento da paridade medindo acurácia em teste (bits novos),
+    com $N \in \{6, 10, 14\}$ e larguras variadas da rede rasa. Em que ponto
+    a rasa deixa de generalizar? A profunda sempre converge? Relacione com
+    ``representável $\ne$ treinável''.
+  \end{exbox}
+
+  \medskip
+  {\small\color{icCinza}
+  Leitura: Nielsen, cap.\ 4 \textbullet\ Montúfar \emph{et al.}\ (2014),
+  seções 1--2 \textbullet\ Telgarsky (2016), separação profundidade/largura.}
+\end{frame}
+
+\end{document}

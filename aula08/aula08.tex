@@ -1,0 +1,98 @@
+%% ============================================================
+%% AULA 8 — Redes que leem: sequências, recorrência e memória
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): item 2 — arquiteturas;
+%% deep learning: introdução.
+%%
+%% Compilar:  latexmk -xelatex aula08.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 8 — Recorrência]{Aula 8: Redes que leem — sequências, recorrência e memória}
+\subtitle[GBC073 — Inteligência Computacional]{RNN \textbullet\ gradiente que some \textbullet\ LSTM e GRU}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{Sequências não cabem em MLPs}
+    \item<2-> \textbf{RNN e o gradiente que some (ou explode)}
+    \item<3-> \textbf{LSTM e GRU: memória com portões}
+    \item<4-> \textbf{Aplicações: linguagem e séries temporais}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Sequências não cabem em MLPs}
+
+\begin{frame}{Sequências não cabem em MLPs}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Texto, áudio, séries temporais: comprimento variável, ordem importa.
+    \item Uma MLP exige tamanho fixo de entrada — e ignora a ordem.
+    \item A recorrência: o estado oculto carrega o passado de um passo ao
+          próximo.
+    \item A mesma célula é reaplicada a cada passo — pesos compartilhados no
+          tempo.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{RNN e o gradiente que some}
+
+\begin{frame}{RNN e o gradiente que some (ou explode)}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Desenrolar a RNN no tempo (\emph{unrolling}): uma rede profunda por
+          passo.
+    \item Retropropagação através do tempo (BPTT).
+    \item Produtos repetidos de jacobianos: o gradiente some (ou explode)
+          exponencialmente.
+    \item O gradiente que some apaga dependências de longo alcance.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{LSTM e GRU}
+
+\begin{frame}{LSTM e GRU: memória com portões}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item LSTM: célula de memória $c$ com portões de esquecer, escrever e ler.
+    \item O portão de esquecer abre um caminho de gradiente que não some.
+    \item GRU: versão enxuta — dois portões, sem célula separada.
+    \item O que as duas fazem de verdade: escolher o que lembrar e o que
+          descartar.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Aplicações}
+
+\begin{frame}{Aplicações: linguagem e séries temporais}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Modelagem de linguagem: prever o próximo símbolo.
+    \item Tradução, classificação de sentimento, legendagem.
+    \item Séries temporais: previsão, anomalias, controle.
+    \item Na prática moderna, muitas tarefas migraram para atenção (aula 9) —
+          mas a recorrência continua viva em nichos.
+  \end{itemize}
+\end{frame}
+
+\end{document}

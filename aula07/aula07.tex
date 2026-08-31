@@ -1,0 +1,99 @@
+%% ============================================================
+%% AULA 7 — Redes que enxergam: convolução
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): item 2 — arquiteturas;
+%% aplicações: classificação.
+%%
+%% Compilar:  latexmk -xelatex aula07.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 7 — Convolução]{Aula 7: Redes que enxergam — convolução}
+\subtitle[GBC073 — Inteligência Computacional]{Campos receptivos \textbullet\ pooling \textbullet\ LeNet a ResNet \textbullet\ transferência}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{O que a convolução muda em relação à MLP}
+    \item<2-> \textbf{Filtros e mapas de características}
+    \item<3-> \textbf{Pooling e invariância}
+    \item<4-> \textbf{Arquiteturas clássicas e transferência de aprendizado}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{O que a convolução muda em relação à MLP}
+
+\begin{frame}{O que a convolução muda em relação à MLP}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Uma MLP sobre pixels ignora a estrutura espacial da imagem.
+    \item Convolução: o mesmo filtro desliza por toda a imagem — pesos
+          compartilhados.
+    \item Duas hipóteses embutidas: localidade (campos receptivos) e
+          invariância à translação.
+    \item Muito menos parâmetros, muito mais dados aproveitados.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Filtros e mapas de características}
+
+\begin{frame}{Filtros e mapas de características}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Um filtro aprende um padrão local: bordas, cantos, texturas.
+    \item Camadas profundas compõem padrões em padrões.
+    \item \emph{Stride}, \emph{padding}, canais — a aritmética da convolução.
+    \item Visualizar os filtros aprendidos: o que a rede vê no mundo?
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Pooling e invariância}
+
+\begin{frame}{Pooling e invariância}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Pooling resume uma região: máximo ou média.
+    \item Reduz a resolução espacial e ganha tolerância a pequenos deslocamentos.
+    \item Efeito colateral: a rede fica mais barata a cada camada.
+    \item Invariância total não existe — é sempre aproximada e aprendida.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Arquiteturas clássicas e transferência de aprendizado}
+
+\begin{frame}{Arquiteturas clássicas e transferência de aprendizado}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Linha do tempo: LeNet, AlexNet, VGG, Inception, ResNet.
+    \item ResNet: conexões residuais que permitem redes muito profundas.
+    \item Transferência: reutilizar redes pré-treinadas e ajustar
+          (\emph{fine-tuning}).
+    \item Poucos dados + grande modelo pré-treinado = combinação vencedora.
+  \end{itemize}
+  \begin{alertabox}
+    Treinar uma CNN do zero em um conjunto pequeno quase sempre perde para
+    o \emph{fine-tuning} de uma rede pré-treinada — comece por lá.
+  \end{alertabox}
+\end{frame}
+
+\end{document}

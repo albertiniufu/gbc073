@@ -1,0 +1,107 @@
+%% ============================================================
+%% AULA 9 — Atenção: quando a rede aprende onde olhar
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): item 2 — deep learning: introdução.
+%%
+%% Compilar:  latexmk -xelatex aula09.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 9 — Atenção]{Aula 9: Atenção — quando a rede aprende onde olhar}
+\subtitle[GBC073 — Inteligência Computacional]{Self-attention \textbullet\ transformers \textbullet\ LLMs \textbullet\ o custo da escala}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{Atenção como média ponderada aprendida}
+    \item<2-> \textbf{Self-attention: cada token olha todos os outros}
+    \item<3-> \textbf{O transformer}
+    \item<4-> \textbf{LLMs e o custo da escala}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Atenção como média ponderada aprendida}
+
+\begin{frame}{Atenção como média ponderada aprendida}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Na RNN, o passado inteiro precisa caber num único vetor de estado —
+          gargalo.
+    \item Atenção: a saída olha diretamente para todas as posições e decide
+          o peso de cada uma.
+    \item Consulta (\emph{query}), chave (\emph{key}) e valor (\emph{value}):
+          a tríade da atenção.
+    \item Os pesos de atenção são aprendidos — a rede aprende \emph{onde olhar}.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Self-attention}
+
+\begin{frame}{Self-attention: cada token olha todos os outros}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Uma sequência olha para si mesma: cada token pondera todos os
+          demais, incluindo ele próprio.
+    \item Caminho de informação de comprimento constante entre qualquer par
+          de posições.
+    \item Multi-cabeças: várias relações em paralelo (sintaxe, gênero,
+          co-referência\ldots).
+    \item Codificação posicional: sem recorrência, a ordem precisa ser
+          injetada.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{O transformer}
+
+\begin{frame}{O transformer}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Blocos repetidos: atenção + rede densa, com conexões residuais e
+          normalização.
+    \item Codificador--decodificador: tradução e afins.
+    \item Só-decodificador: os modelos de linguagem modernos.
+    \item Paralelismo total no treino — é a arquitetura que escala.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{LLMs e o custo da escala}
+
+\begin{frame}{LLMs e o custo da escala}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Leis de escala: capacidade emerge com dados e computação juntos.
+    \item Pré-treino em corpora imensos + ajuste fino para tarefas.
+    \item O custo da escala: energia, dinheiro e a concentração de quem pode
+          treinar.
+    \item A revanche da aula 1: o perceptron, 65 anos depois.
+  \end{itemize}
+  \begin{quizbox}
+    O custo computacional do self-attention cresce linearmente com o
+    comprimento da sequência.
+
+    \smallskip
+    \opcoes{Verdadeiro \;/\; Falso}
+  \end{quizbox}
+\end{frame}
+
+\end{document}

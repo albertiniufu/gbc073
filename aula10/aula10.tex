@@ -1,0 +1,103 @@
+%% ============================================================
+%% AULA 10 — Aprender sem professor: autoencoders e embeddings
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): item 2 — aprendizagem
+%% não-supervisionada; aplicações (clusterização).
+%%
+%% Compilar:  latexmk -xelatex aula10.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 10 — Autoencoders]{Aula 10: Aprender sem professor — autoencoders e embeddings}
+\subtitle[GBC073 — Inteligência Computacional]{Autoencoders \textbullet\ embeddings \textbullet\ aprendizado de representações}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{Aprender sem rótulos: o que é a tarefa}
+    \item<2-> \textbf{Autoencoders (reconstrução, denoising, esparso)}
+    \item<3-> \textbf{Embeddings e aprendizado de representações}
+    \item<4-> \textbf{Não-supervisionado como pré-treino}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Aprender sem rótulos}
+
+\begin{frame}{Aprender sem rótulos: o que é a tarefa}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Rótulos são caros; dados não rotulados são abundantes.
+    \item Sem alvo, o sinal de aprendizado precisa vir dos próprios dados.
+    \item A tarefa muda: reconstruir, prever, comparar — a \emph{representação}
+          vira o produto.
+    \item A ficha da disciplina: ``aprendizagem não-supervisionada'' — aqui,
+          com o olhar de deep learning.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Autoencoders}
+
+\begin{frame}{Autoencoders (reconstrução, denoising, esparso)}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Codificador comprime $\vx$ em um código $\vet{z}$; decodificador
+          reconstrói $\hat{\vx}$.
+    \item A perda é a reconstrução — nenhum rótulo envolvido.
+    \item O gargalo força o código a capturar o essencial dos dados.
+    \item Variantes: denoising (reconstruir do ruído) e esparso (poucos
+          neurônios ativos).
+  \end{itemize}
+  \begin{ideiabox}
+    Um autoencoder é um professor que se ensina a si mesmo: a prova é
+    reconstruir o que viu — e a cola é entender a estrutura dos dados.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Embeddings}
+
+\begin{frame}{Embeddings e aprendizado de representações}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item \emph{Embedding}: o vetor que representa um objeto em um espaço
+          aprendido.
+    \item Distâncias no espaço de embedding refletem semelhança semântica.
+    \item Redução de dimensionalidade como leitura: PCA, t-SNE, UMAP.
+    \item A representação aprendida transfere para tarefas supervisionadas.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Não-supervisionado como pré-treino}
+
+\begin{frame}{Não-supervisionado como pré-treino}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Pré-treino não-supervisionado + ajuste fino com poucos rótulos.
+    \item O modelo de linguagem prevê o próximo token — a maior tarefa
+          não-supervisionada já construída.
+    \item Onde mais: representações para busca, recomendação e dados
+          científicos.
+    \item Não-supervisionado não substitui o supervisionado — o alimenta.
+  \end{itemize}
+\end{frame}
+
+\end{document}

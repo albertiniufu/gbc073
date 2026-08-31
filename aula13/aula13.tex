@@ -1,0 +1,102 @@
+%% ============================================================
+%% AULA 13 — Aplicações: classificação em escala e projeto de
+%%           redes
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): item 2 — aplicações: classificação;
+%% projeto de redes.
+%%
+%% Compilar:  latexmk -xelatex aula13.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 13 — Classificação em escala]{Aula 13: Aplicações — classificação em escala e projeto de redes}
+\subtitle[GBC073 — Inteligência Computacional]{Visão \textbullet\ áudio \textbullet\ saúde \textbullet\ boas práticas}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{Classificação em escala (visão computacional)}
+    \item<2-> \textbf{Áudio, saúde e texto}
+    \item<3-> \textbf{Projeto de redes: do problema à arquitetura}
+    \item<4-> \textbf{Boas práticas: baselines, ablações, logs}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Classificação em escala}
+
+\begin{frame}{Classificação em escala (visão computacional)}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item De 10 classes (CIFAR-10) a milhares (ImageNet) e milhões (retrieval).
+    \item A jornada do problema: dados, arquitetura, treino, avaliação.
+    \item Métricas que importam: acurácia não conta a história inteira.
+    \item Detecção e segmentação como parentes próximos da classificação.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Áudio, saúde e texto}
+
+\begin{frame}{Áudio, saúde e texto}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Áudio: espectrogramas + CNNs; voz, música, sons do ambiente.
+    \item Saúde: imagens médicas, sinais, prontuários — e o peso de errar.
+    \item Texto: classificação de documentos, sentimento, moderação.
+    \item O mesmo arcabouço (aulas 7--9), domínios diferentes — a
+          representação é que muda.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Projeto de redes}
+
+\begin{frame}{Projeto de redes: do problema à arquitetura}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Topologia: quantas camadas, quantos neurônios, que ativações.
+    \item Parâmetros: taxa de aprendizado, tamanho de lote, épocas.
+    \item Modos de treinamento: do zero, transferência, ajuste fino.
+    \item A ficha pede ``projeto de redes'' — a resposta moderna é
+          \emph{começar de algo que já funciona}.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Boas práticas}
+
+\begin{frame}{Boas práticas: baselines, ablações, logs}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item \emph{Baseline} honesto primeiro: o método mais simples que já
+          resolve o problema.
+    \item Ablações: desligar uma peça por vez para medir a contribuição de
+          cada uma.
+    \item Registrar tudo: semente, versão do código, hiperparâmetros.
+    \item Só melhore o que a métrica mede — e desconfie da métrica.
+  \end{itemize}
+  \begin{ideiabox}
+    Um experimento reprodutível vale mais que um resultado impressionante:
+    quem não registra as condições, não consegue nem repetir o próprio
+    achado.
+  \end{ideiabox}
+\end{frame}
+
+\end{document}

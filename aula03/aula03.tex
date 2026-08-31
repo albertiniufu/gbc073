@@ -1,0 +1,800 @@
+%% ============================================================
+%% AULA 3 — Aprendendo a rede: Parte 1
+%% GBC073 — Inteligência Computacional (tema InteligenciaComputacional)
+%%
+%% Adaptada da Lecture 3 do 11-785 (Intro to Deep Learning, CMU, S26):
+%% "Learning the network: Part 1".
+%% Ênfase moderna: diferenciabilidade, autograd, ERM e perdas em PyTorch.
+%% Perceptron de Rosenblatt e ADALINE/MADALINE como perspectiva histórica.
+%%
+%% Compilar:  latexmk -xelatex aula03.tex   (XeLaTeX, duas passadas)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+% ---------- código Python/PyTorch --------------------------------
+\usepackage{listings}
+\lstdefinestyle{py}{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{icAzul}\bfseries,
+  commentstyle=\color{icCinza}\itshape,
+  stringstyle=\color{icVerde},
+  emph={torch, nn, optim, backward, grad},
+  emphstyle=\color{icMagenta},
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  xleftmargin=1em,
+}
+\lstset{style=py}
+
+% ---------- macro local desta aula -------------------------------
+\newcommand{\dive}{\operatorname{div}}   % divergência rede x alvo
+
+\title[Aula 3 — Aprendendo a rede I]{Aula 3: Aprendendo a rede — Parte 1}
+\subtitle[GBC073 — Inteligência Computacional]{Do perceptron à minimização de risco empírico \textbullet\ por que diferenciabilidade é tudo}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \framesubtitle{Baseada na Lecture 3 do 11-785 (CMU) — com olhar de deep learning moderno}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{O problema de aprendizado:} a rede é uma função paramétrica
+          $f(\vx; W)$ — aprender $=$ estimar $W$ a partir de \emph{amostras}
+    \item<2-> \textbf{Histórico:} a regra do perceptron — e por que ela
+          \alert{não} treina redes de múltiplas camadas
+    \item<3-> \textbf{A virada moderna:} ativações e perdas \alert{diferenciáveis},
+          a decisão que tornou o deep learning possível
+    \item<4-> \textbf{ERM:} o arcabouço que todo treinamento em PyTorch
+          implementa até hoje
+    \item<5-> \textbf{Ponte para a Aula 4:} treinar $=$ otimizar uma função
+          diferenciável $\Rightarrow$ descida de gradiente
+  \end{itemize}
+
+  \onslide<5->{%
+  \begin{ideiabox}
+    Uma ideia atravessa a aula: só ajustamos bilhões de parâmetros porque cada
+    pedaço da rede responde ``se eu mexer um pouquinho aqui, o erro muda quanto?''.
+  \end{ideiabox}}
+\end{frame}
+
+% ============================================================
+\section{O problema de aprendizado}
+
+% ------------------------------------------------------------
+\begin{frame}{Recapitulação: redes representam qualquer função}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Redes neurais são \textbf{aproximadores universais}: funções booleanas,
+          fronteiras de classificação e funções contínuas em compactos
+    \item Desde que a arquitetura tenha \alert{capacidade suficiente}
+          (neurônios/camadas em número adequado)
+    \item Voz $\to$ transcrição, imagem $\to$ legenda, estado do jogo $\to$ jogada:
+          todas são funções — logo, todas são modeláveis por uma rede
+  \end{itemize}
+
+  \begin{alertabox}
+    ``Existe uma rede que representa $g$'' \alert{não} diz \emph{como encontrá-la}:
+    aproximação universal é teorema de existência; aprendizado é \emph{busca}.
+  \end{alertabox}
+
+  \begin{ideiabox}
+    Separar \emph{representação} de \emph{aprendizado}: a Aula 2 respondeu
+    ``o que a rede \emph{pode} computar''; hoje, ``como fazê-la computar o que
+    queremos''.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{A rede é uma função paramétrica}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{defbox}{Aprender a rede}
+        Fixada a arquitetura, a rede computa $f(\vx;\, W)$, onde $W$ reúne
+        \textbf{todos os pesos e vieses}. \emph{Aprender} é determinar $W$
+        tal que $f(\cdot\,; W)$ aproxime a função-alvo $g$.
+      \end{defbox}
+      \begin{itemize}\setlength{\itemsep}{0.3ex}
+        \item A arquitetura (quantas camadas, quem liga em quem) é
+              \emph{decisão de projeto} — assumimos hoje que ela basta
+        \item Os \textbf{parâmetros} $W$ são o que o treinamento ajusta
+        \item Rede direta (\emph{feedforward}): sem laços — redes com
+              realimentação ficam para o futuro
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{center}
+        \scalebox{0.62}{\mlp{3,4,4,2}}
+      \end{center}
+      \begin{center}
+        {\small\color{icCinza} Cada seta carrega um peso $\pesoij{j}{i}$;
+        o conjunto de todos eles é $W$.}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Construir a rede à mão não escala}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.4ex}
+        \item Fronteira simples (losango): dá para \emph{projetar} os pesos —
+              uma reta por lado, um E lógico no topo
+        \item Reconhecer um dígito $28{\times}28$? Transcrever fala?
+              \alert{Impossível} escrever os pesos à mão
+        \item Precisamos de \textbf{estimação automática}: calcular $W$ que
+              minimize a discordância entre $f(\vx; W)$ e $g(\vx)$
+      \end{itemize}
+      \begin{ideiabox}
+        Ideal: minimizar o desacordo $f \times g$ em \emph{todo} o domínio.
+        Mas para isso precisaríamos conhecer $g$ em todo lugar — e aí não
+        haveria o que aprender.
+      \end{ideiabox}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{center}
+      \scalebox{0.68}{%
+      \begin{tikzpicture}
+        \draw[->, icCinza] (-1.7,0) -- (1.7,0) node[below right] {\small $x_1$};
+        \draw[->, icCinza] (0,-1.7) -- (0,1.7) node[above left] {\small $x_2$};
+        \draw[thick, icMagenta, fill=icMagenta!12]
+          (1.2,0) -- (0,1.2) -- (-1.2,0) -- (0,-1.2) -- cycle;
+        \node[icMagenta] at (0,0.35) {\small $+1$};
+        \node[icCinza] at (1.15,1.15) {\small $0$};
+      \end{tikzpicture}}
+      \end{center}
+      \begin{center}
+        {\small\color{icCinza} 4 retas $+$ 1 conjunção: fácil.
+        Agora imagine $10^7$ pesos.}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Amostrar a função: os dados de treinamento}
+  \begin{defbox}{Conjunto de treinamento}
+    Não conhecemos $g$ inteira; conhecemos \textbf{amostras} dela:
+    \[
+      \D = \{(\vx_1, d_1),\, (\vx_2, d_2),\, \ldots,\, (\vx_N, d_N)\},
+      \qquad d_i = g(\vx_i).
+    \]
+    Ex.: imagens e seus rótulos; áudios e suas transcrições.
+  \end{defbox}
+
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item Ajustamos $W$ para que $f(\vx_i; W) \approx d_i$ \emph{nos pontos amostrados}
+    \item E \textbf{torcemos} para acertar onde não há amostra —
+          a questão da \emph{generalização}, tema recorrente do curso
+  \end{itemize}
+
+  \begin{ideiabox}
+    ``Treinar'' $=$ ``interpolar $N$ pares entrada--saída com uma função
+    paramétrica flexível, esperando que ela se comporte bem fora deles''.
+    A frase descreve do perceptron ao GPT.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Para discutir em aula}
+  \begin{quizbox}
+    Como redes neurais são aproximadores universais, \emph{qualquer} rede, de
+    \emph{qualquer} arquitetura, aproxima qualquer função com precisão
+    arbitrária — e, com poucas amostras de treinamento, seus parâmetros podem
+    ser perfeitamente determinados.
+
+    \smallskip
+    \opcoes{Verdadeiro \;/\; Falso}
+  \end{quizbox}
+
+  \pause
+
+  \begin{respbox}
+    \textbf{Falso, duas vezes.} (1) A aproximação universal exige
+    \alert{capacidade mínima}: redes com poucos parâmetros podem ser
+    aproximadores muito ruins. (2) Amostras finitas \emph{subdeterminam} a
+    função: infinitas redes passam pelos mesmos pontos. O que fazemos é
+    \emph{estimar} os parâmetros que melhor ajustam os dados — nunca
+    ``recuperar perfeitamente'' a função-alvo desconhecida.
+  \end{respbox}
+\end{frame}
+
+% ============================================================
+\section{O perceptron de Rosenblatt (perspectiva histórica)}
+
+% ------------------------------------------------------------
+\begin{frame}{O perceptron original: unidade de limiar}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.4ex}
+        \item Rosenblatt (1958): soma ponderada seguida de \textbf{degrau} —
+              \smallskip
+              \begin{center}
+                $\hat{y} = 1$ se $\vw^{\!\top}\vx + b > 0$;\;
+                $\hat{y} = 0$ caso contrário
+              \end{center}
+              \smallskip
+        \item Truque de notação: o viés vira o peso $w_{N+1}$ de uma entrada
+              fixa $x_{N+1} = 1$
+        \item Com isso a fronteira $\vw^{\!\top}\vx = 0$ é um hiperplano
+              \emph{pela origem} no espaço estendido
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{center}
+        \scalebox{0.60}{\perceptron}
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \begin{defbox}{Geometria do perceptron}
+    $\vw$ é \textbf{ortogonal} ao hiperplano de decisão e aponta para a classe
+    positiva. Aprender o perceptron $=$ encontrar esse vetor normal.
+  \end{defbox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}[fragile]{O algoritmo do perceptron}
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \begin{algbox}{Regra de Rosenblatt (\emph{online})}
+        Com rótulos $d_i \in \{-1, +1\}$:
+        \begin{itemize}\setlength{\itemsep}{0.2ex}
+          \item Inicialize $\vw = \vet{0}$
+          \item Percorra as amostras; se $d_i\,(\vw^{\!\top}\vx_i) \le 0$
+                (erro), atualize
+                \[ \vw \leftarrow \vw + d_i\, \vx_i \]
+          \item Repita até não haver erros
+        \end{itemize}
+      \end{algbox}
+      {\small Errou um positivo? Some $\vx_i$ (aproxima $\vw$ dele).
+      Errou um negativo? Subtraia. Só isso.}
+    \end{column}
+    \begin{column}{0.51\textwidth}
+\begin{lstlisting}
+import numpy as np
+
+def perceptron(X, y, epocas=100):
+    # y em {-1, +1}; coluna do vies
+    X = np.c_[X, np.ones(len(X))]
+    w = np.zeros(X.shape[1])
+    for _ in range(epocas):
+        erros = 0
+        for xi, yi in zip(X, y):
+            if yi * (w @ xi) <= 0:
+                w += yi * xi  # Rosenblatt
+                erros += 1
+        if erros == 0:
+            break
+    return w
+\end{lstlisting}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Quando funciona — e quando trava}
+  \begin{teobox}{Convergência do perceptron (Novikoff)}
+    Se as classes são \textbf{linearmente separáveis}, o algoritmo converge em
+    tempo finito: partindo de $\vw = \vet{0}$, faz no máximo
+    $\left(R/\gamma\right)^{2}$ atualizações, onde
+    $R = \max_i \norm{\vx_i}$ e $\gamma$ é a \emph{margem} — a menor distância
+    de uma amostra ao hiperplano separador ótimo.
+  \end{teobox}
+
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item A mesma $\gamma$ das SVMs: margens largas $\Rightarrow$ problema fácil
+    \item Intuição do limitante: cada erro dá um passo de tamanho
+          $\sim\!R$, e são precisos muitos passos de tamanho $\gamma$
+          para desfazê-lo
+  \end{itemize}
+
+  \begin{alertabox}
+    Se as classes \alert{não} são linearmente separáveis — o caso típico de
+    dados reais, com ruído e sobreposição — não existe hiperplano perfeito e o
+    algoritmo \textbf{nunca converge}: fica oscilando para sempre. Já aqui o
+    modelo de 1958 esbarra na realidade.
+  \end{alertabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Por que a regra do perceptron não treina um MLP}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.4ex}
+        \item Fronteiras não lineares exigem \textbf{camadas ocultas}:
+              cada neurônio oculto aprende \emph{uma} reta
+        \item O dado só especifica \alert{entrada e saída da rede} — ninguém
+              diz o que cada neurônio oculto deve responder
+        \item A regra exigiria \emph{inventar rótulos intermediários}
+              separáveis que, combinados, deem a fronteira certa —
+              para \emph{todos} os neurônios ao mesmo tempo
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{center}
+      \scalebox{0.58}{%
+      \begin{tikzpicture}[node distance=0.5cm and 1.1cm]
+        \node[neuronio entrada] (x1) {$x_1$};
+        \node[neuronio entrada, below=of x1] (x2) {$x_2$};
+        \node[neuronio destacado, right=of x1] (h1) {\textbf{?}};
+        \node[neuronio destacado, right=of x2] (h2) {\textbf{?}};
+        \node[neuronio saida] (o) at ($(h1)!0.5!(h2)+(1.7,0)$) {$\hat{y}$};
+        \draw[sinapse] (x1) -- (h1);
+        \draw[sinapse] (x1) -- (h2);
+        \draw[sinapse] (x2) -- (h1);
+        \draw[sinapse] (x2) -- (h2);
+        \draw[sinapse] (h1) -- (o);
+        \draw[sinapse] (h2) -- (o);
+        \node[below=0.28cm of h2, text width=3.2cm, align=center,
+              icCinza, font=\small]
+              {saídas desejadas \textbf{desconhecidas}};
+      \end{tikzpicture}}
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \begin{alertabox}
+    Rotular os neurônios internos é \textbf{busca combinatória} (exponencial).
+    A constatação \alert{paralisou a área por mais de uma década}: o MLP
+    parecia intreinável.
+  \end{alertabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Curiosidade histórica: ADALINE, MADALINE e a regra delta}
+  \framesubtitle{Widrow \& Hoff (1960) — o detalhe que sobreviveu foi a ideia de gradiente}
+
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item \textbf{ADALINE:} mesmo perceptron, outra regra de aprendizado —
+          minimiza o erro quadrático sobre a \emph{pré-ativação} $\campo$
+          (contínua!), não sobre a saída binária
+    \item \textbf{MADALINE:} versão multicamada com heurística gulosa (inverte
+          a saída do neurônio ``mais em dúvida'') — não escalou; nota de rodapé
+  \end{itemize}
+
+  \[
+    \erro = \tfrac{1}{2}\,(d - \campo)^2
+    \qquad\Longrightarrow\qquad
+    \mdestaque{icMagenta}{\vw \leftarrow \vw + \taxa\,(d - \campo)\,\vx}
+  \]
+
+  \begin{ideiabox}
+    A \textbf{regra delta} (LMS, Widrow--Hoff) \emph{é} a descida de gradiente
+    do erro quadrático em um neurônio linear. Generalizada para qualquer
+    ativação diferenciável e encadeada camada a camada, ela vira exatamente a
+    \alert{retropropagação} — o algoritmo que treina toda rede moderna. De
+    1960 só descartamos o degrau; o gradiente ficou.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Para discutir em aula}
+  \begin{quizbox}
+    Em um MLP cuja fronteira-alvo é um polígono, todos os neurônios já foram
+    corretamente ajustados, exceto \emph{um} neurônio oculto. Como os demais
+    estão certos, podemos usar a regra do perceptron para aprender esse último
+    neurônio diretamente dos dados de treinamento.
+
+    \smallskip
+    \opcoes{Verdadeiro \;/\; Falso}
+  \end{quizbox}
+
+  \pause
+
+  \begin{respbox}
+    \textbf{Falso.} Os rótulos do conjunto de treinamento descrevem a saída da
+    \emph{rede}, não a saída desejada \emph{daquele neurônio} — e, vistos por
+    ele, os dados nem sequer são linearmente separáveis. Seria preciso
+    \emph{rerrotular} instâncias para criar o subproblema linear correto, e o
+    dado não diz quais. É a versão em miniatura do problema combinatório que
+    inviabiliza a regra do perceptron em redes profundas.
+  \end{respbox}
+\end{frame}
+
+% ============================================================
+\section{Diferenciabilidade: a virada moderna}
+
+% ------------------------------------------------------------
+\begin{frame}{O verdadeiro vilão: derivada nula}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.4ex}
+        \item O erro de classificação é \textbf{binário}: deslocar levemente a
+              fronteira quase nunca muda a contagem
+        \item O degrau é \textbf{plano} (derivada $0$) e não diferenciável
+              no salto
+        \item Mexer um pouquinho em um peso \alert{não altera o erro} — não há
+              sinal de \emph{qual direção} melhora; o erro da rede vira uma
+              função em platôs: sem gradiente, sem bússola
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{center}
+      \scalebox{0.85}{%
+      \begin{tikzpicture}
+        \draw[->, icCinza] (-2.1,0) -- (2.3,0) node[below] {\small $\campo$};
+        \draw[->, icCinza] (0,-0.25) -- (0,1.45);
+        \draw[very thick, icCarmim] (-2.1,0) -- (0,0);
+        \draw[very thick, icCarmim] (0,1) -- (2.1,1);
+        \fill[icCarmim] (0,1) circle (1.6pt);
+        \draw[icCarmim, fill=white] (0,0) circle (1.6pt);
+        \node[icCarmim, font=\small] at (1.4,1.25) {degrau};
+        \node[icCinza, font=\scriptsize, align=center] at (0.1,-0.65)
+          {derivada $0$ em toda parte;\\ indefinida no salto};
+      \end{tikzpicture}}
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \begin{alertabox}
+    O obstáculo nunca foi ``multicamadas''; foi \alert{a ausência de gradiente}.
+    Com derivadas, o problema vira otimização contínua — tratável mesmo com
+    bilhões de parâmetros.
+  \end{alertabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Os dois requisitos da aprendizagem moderna}
+  \begin{defbox}{Requisitos de treinabilidade}
+    \textbf{(1) Ativações diferenciáveis} — a saída de cada neurônio varia
+    suavemente com pesos e entradas; \textbf{(2) perda diferenciável} — o
+    desajuste rede\,$\times$\,alvo varia suavemente com a saída da rede.
+  \end{defbox}
+
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item Degrau $\to$ funções suaves: mudanças de peso produzem mudanças
+          \emph{mensuráveis} na saída
+    \item ``Conte os erros'' $\to$ \alert{divergência contínua}, um
+          \emph{proxy} do erro de classificação
+    \item Pela \textbf{regra da cadeia}, a rede \emph{inteira} vira
+          diferenciável em cada parâmetro — o que a retropropagação
+          explora (Aula 5)
+  \end{itemize}
+
+  \begin{ideiabox}
+    O coração do curso: \emph{deep learning é a arte de manter tudo
+    diferenciável}, para que o gradiente flua da perda a cada parâmetro.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Ativações modernas}
+  \begin{columns}[T]
+    \begin{column}{0.31\textwidth}
+      \begin{center}
+      \scalebox{0.72}{%
+      \begin{tikzpicture}
+        \draw[->, icCinza] (-2.2,0) -- (2.4,0) node[below] {\small $\campo$};
+        \draw[->, icCinza] (0,-0.25) -- (0,1.5);
+        \draw[thick, icMagenta]
+          plot[domain=-2.2:2.2, samples=60] (\x, {1/(1+exp(-2.4*\x))});
+        \node[icMagenta, font=\small] at (1.2,1.35) {$\sig(\campo)$};
+      \end{tikzpicture}}
+      \end{center}
+      {\small\textbf{Sigmoide} $\sig(\campo)=\dfrac{1}{1+e^{-\campo}}$\\
+      saída em $(0,1)$; interpretação probabilística}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{center}
+      \scalebox{0.72}{%
+      \begin{tikzpicture}
+        \draw[->, icCinza] (-2.2,0) -- (2.4,0) node[below] {\small $\campo$};
+        \draw[->, icCinza] (0,-0.25) -- (0,1.5);
+        \draw[thick, icAzulClaro] (-2.2,0) -- (0,0);
+        \draw[thick, icAzulClaro] (0,0) -- (1.45,1.45);
+        \node[icAzulClaro, font=\small] at (0.8,1.35) {$\relu(\campo)$};
+      \end{tikzpicture}}
+      \end{center}
+      {\small\textbf{ReLU} $\max(0,\campo)$\\
+      padrão em redes profundas; barata, gradiente $1$ no lado ativo}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{center}
+      \scalebox{0.72}{%
+      \begin{tikzpicture}
+        \draw[->, icCinza] (-2.2,0) -- (2.4,0) node[below] {\small $\campo$};
+        \draw[->, icCinza] (0,-1.3) -- (0,1.5);
+        \draw[thick, icVerde]
+          plot[domain=-2.2:2.2, samples=60] (\x, {tanh(1.2*\x)});
+        \node[icVerde, font=\small] at (1.35,1.3) {$\tanh(\campo)$};
+      \end{tikzpicture}}
+      \end{center}
+      {\small\textbf{Tanh} — sigmoide centrada em $0$; e primas modernas:
+      \emph{softplus}, GELU, SiLU\ldots}
+    \end{column}
+  \end{columns}
+
+  \medskip
+  \begin{itemize}\setlength{\itemsep}{0.2ex}
+    \item Diferenciáveis \emph{em quase todo lugar} basta: no ``bico'' da ReLU
+          usamos uma \textbf{subderivada} (qualquer valor em $[0,1]$) — e o
+          treinamento nem percebe
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{A sigmoide é especial: nasce a regressão logística}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{defbox}{Regressão logística}
+        Um perceptron com ativação sigmoide computa
+        \[
+          P(y = 1 \mid \vx) \;=\; \sig\!\left(\vw^{\!\top}\vx + b\right),
+        \]
+        a \textbf{probabilidade} da classe $1$; decide-se $\hat{y}=1$
+        se ela excede $0{,}5$.
+      \end{defbox}
+      \begin{itemize}\setlength{\itemsep}{0.3ex}
+        \item Em dados reais as classes se \emph{sobrepõem}: a fração de
+              positivos cresce suavemente de $0$ a $1$ — o formato da sigmoide
+        \item A saída vira \alert{grau de confiança}, não um veredito
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{center}
+      \scalebox{0.70}{%
+      \begin{tikzpicture}
+        \draw[->, icCinza] (-2.3,0) -- (2.5,0) node[below] {\small $x$};
+        \draw[->, icCinza] (-2.3,0) -- (-2.3,1.6) node[left] {\small $y$};
+        \foreach \p in {-2.1,-1.8,-1.55,-1.1,-0.7,-0.2,0.3}
+          \fill[icAzulClaro] (\p,0) circle (1.5pt);
+        \foreach \p in {-0.5,0.05,0.5,0.9,1.3,1.7,2.1,2.3}
+          \fill[icCarmim] (\p,1.3) circle (1.5pt);
+        \draw[thick, icMagenta]
+          plot[domain=-2.3:2.4, samples=60]
+          (\x, {1.3/(1+exp(-2.6*(\x-0.1)))});
+        \node[icCinza, font=\scriptsize, align=center] at (0.2,-0.55)
+          {classes sobrepostas: nenhum limiar\\ é perfeito, mas $P(y{=}1)$
+           cresce suave};
+      \end{tikzpicture}}
+      \end{center}
+    \end{column}
+  \end{columns}
+
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}[fragile]{Diferenciabilidade em código: \texttt{autograd}}
+
+\begin{lstlisting}
+import torch
+
+x = torch.tensor([1.0, 2.0])
+w = torch.tensor([0.5, -0.3], requires_grad=True)   # parametros:
+b = torch.tensor(0.1, requires_grad=True)           # pediremos gradiente
+
+z = w @ x + b               # campo local induzido (diferenciavel)
+y = torch.sigmoid(z)        # ativacao suave (diferenciavel)
+d = torch.tensor(1.0)       # alvo
+loss = (y - d)**2           # divergencia (diferenciavel)
+loss.backward()             # regra da cadeia, automatica
+print(w.grad, b.grad)       # dloss/dw e dloss/db
+\end{lstlisting}
+
+  \begin{ideiabox}
+    Troque \texttt{sigmoid} por um degrau e \texttt{w.grad} vira zero em toda
+    parte: o otimizador fica cego. Ativações suaves são \emph{a} condição
+    para o \texttt{backward()} existir.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Para discutir em aula}
+  \begin{quizbox}
+    Com ativação degrau, a derivada do erro de classificação em relação ao
+    limiar indica em que direção movê-lo. Já com ativação sigmoide, deslocar a
+    função altera a distância total entre saídas e alvos mesmo quando o erro
+    de classificação não muda.
+
+    \smallskip
+    \opcoes{Só a 1\textsuperscript{a} é verdadeira \;/\;
+            Só a 2\textsuperscript{a} é verdadeira \;/\;
+            Ambas \;/\; Nenhuma}
+  \end{quizbox}
+
+  \pause
+
+  \begin{respbox}
+    \textbf{Só a 2\textsuperscript{a}.} Com degrau, o erro é constante por
+    trechos: a derivada é $0$ (ou inexistente) e \emph{não} aponta direção
+    alguma. Com sigmoide, a distância contínua aos alvos muda a cada
+    deslocamento — e o seu gradiente diz para onde ir, \emph{mesmo entre}
+    duas configurações com a mesma contagem de erros. É exatamente por isso
+    que otimizamos um \alert{proxy contínuo}, e não o erro $0/1$.
+  \end{respbox}
+\end{frame}
+
+% ============================================================
+\section{Minimização de risco empírico}
+
+% ------------------------------------------------------------
+\begin{frame}{Divergência: medindo o desajuste de forma diferenciável}
+  \begin{defbox}{Função de divergência}
+    $\dive(f(\vx; W),\, g(\vx))$ quantifica o desajuste entre a saída da rede
+    e o alvo, satisfazendo:
+    \begin{itemize}\setlength{\itemsep}{0.15ex}
+      \item $\dive(f, g) = 0$ quando $f(\vx; W) = g(\vx)$;
+      \item $\dive(f, g) > 0$ quando diferem;
+      \item $\dive$ é \textbf{diferenciável em relação a $f$} (e portanto,
+            pela cadeia, em relação a $W$).
+    \end{itemize}
+  \end{defbox}
+
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item Para classificação, a divergência \alert{não é} o erro $0/1$ —
+          é um substituto suave dele (veremos: entropia cruzada)
+    \item Para regressão, o clássico: $\dive = \norm{f(\vx;W) - g(\vx)}^2$
+    \item A escolha da divergência é decisão de modelagem tão importante
+          quanto a arquitetura
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Risco esperado, risco empírico}
+  O que gostaríamos de minimizar — o \textbf{risco esperado} sobre todo o
+  domínio de entrada:
+  \[
+    R(W) \;=\; \E_{\vx}\!\left[\, \dive\!\big(f(\vx; W),\, g(\vx)\big) \,\right]
+  \]
+
+  O que \emph{conseguimos} calcular — a média sobre as $N$ amostras:
+  \[
+    \mdestaque{icMagenta}{\hat{R}(W) \;=\;
+      \frac{1}{N} \sum_{i=1}^{N}
+      \termo{\dive\!\big(f(\vx_i; W),\, d_i\big)}{desajuste na amostra $i$}}
+  \]
+
+  \begin{defbox}{Minimização de risco empírico (ERM)}
+    Treinar a rede é resolver
+    \(\;\hat{W} = \argmin_{W}\, \hat{R}(W)\;\)
+    — minimizar a \emph{estimativa empírica} do risco, na esperança de que ela
+    aproxime bem o risco verdadeiro.
+  \end{defbox}
+
+  {\small\color{icCinza} Na prática chamamos $\hat{R}$ de \emph{loss}
+  (perda). Para um conjunto de treinamento fixo, a perda é função apenas
+  de $W$.}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{As divergências do dia a dia moderno}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{tcolorbox}[iccaixa=icCiano, title={Regressão: erro quadrático}]
+        \[
+          \dive = \norm{\hat{\vy}_i - \vy_i}^2
+        \]
+        {\small \texttt{nn.MSELoss} — suave, penaliza quadraticamente;
+        ligado à verossimilhança gaussiana.}
+      \end{tcolorbox}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{tcolorbox}[iccaixa=icMagenta, title={Classificação: entropia cruzada}]
+        \[
+          \dive = -\!\sum_c d_{i,c} \log \hat{y}_{i,c}
+        \]
+        {\small \texttt{nn.CrossEntropyLoss} / \texttt{nn.BCEWithLogitsLoss}
+        — proxy suave do erro $0/1$; deriva da leitura probabilística
+        da sigmoide/softmax.}
+      \end{tcolorbox}
+    \end{column}
+  \end{columns}
+
+  \medskip
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item As duas são diferenciáveis, convexas \emph{na saída da rede} e têm
+          gradientes bem-comportados — por isso dominam a prática
+    \item Deduziremos a entropia cruzada com calma quando tratarmos de saídas
+          probabilísticas; hoje basta o papel: \alert{divergência no ERM}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}[fragile]{ERM em PyTorch: o esqueleto de todo treinamento}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+import torch, torch.nn as nn
+
+model = nn.Sequential(              # f( . ; W): MLP diferenciavel
+    nn.Linear(2, 16), nn.ReLU(),
+    nn.Linear(16, 1))
+criterio = nn.BCEWithLogitsLoss()   # div(): proxy suave do erro 0/1
+otim = torch.optim.SGD(model.parameters(), lr=0.1)
+for epoca in range(1000):
+    saida = model(X).squeeze()      # f(X_i; W) para todo i
+    risco = criterio(saida, d)      # R^(W): media das divergencias
+    otim.zero_grad()
+    risco.backward()                # gradientes de R^ em cada peso
+    otim.step()                     # ajusta W na direcao que reduz R^
+\end{lstlisting}
+
+  \begin{ideiabox}
+    Mapeie o laço na teoria: \texttt{model} $=f(\cdot;W)$, \texttt{criterio}
+    $=\dive$, \texttt{risco} $=\hat{R}(W)$, \texttt{backward} $=$ regra da
+    cadeia, \texttt{step} $=$ otimização. Do MLP aos LLMs, é este o programa.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Treinar $=$ otimizar: a ponte para a próxima aula}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Chegamos a um enunciado puramente matemático: dado $\D$, minimizar
+          $\hat{R}(W)$ em relação a $W$ — uma instância de
+          \textbf{minimização de funções}
+    \item Como tudo é diferenciável, o gradiente
+          $\deriv{\hat{R}}{W}$ existe e aponta a direção de
+          \emph{maior crescimento} do risco — andaremos no sentido oposto
+  \end{itemize}
+
+  \[
+    \mdestaque{icMagenta}{W \;\leftarrow\; W \;-\;
+      \termo{\taxa}{taxa de aprendizado} \cdot
+      \termo{\deriv{\hat{R}}{W}}{gradiente do risco empírico}}
+  \]
+
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item \textbf{Aula 4:} descida de gradiente em detalhe — o que é o
+          gradiente em muitas dimensões, mínimos locais, taxa de aprendizado
+    \item \textbf{Aula 5:} como calcular esse gradiente \emph{eficientemente}
+          em uma rede profunda — a retropropagação
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Exercício}
+  \begin{exbox}{1 — Da regra delta ao gradiente}
+    Considere um neurônio linear $\hat{y} = \vw^{\!\top}\vx$ com perda
+    $\erro = \tfrac{1}{2}(d - \hat{y})^2$ para uma única amostra
+    $(\vx, d)$.
+    \begin{itemize}\setlength{\itemsep}{0.2ex}
+      \item[(a)] Calcule $\deriv{\erro}{\vw}$ e mostre que a atualização por
+                 gradiente, com passo $\taxa$, é exatamente a regra delta
+                 de Widrow--Hoff vista hoje.
+      \item[(b)] Repita com $\hat{y} = \sig(\vw^{\!\top}\vx)$, usando
+                 $\sig'(\campo) = \sig(\campo)\,(1 - \sig(\campo))$. Que fator novo
+                 aparece na atualização?
+      \item[(c)] Verifique (b) numericamente com o trecho de
+                 \texttt{autograd} do slide anterior, comparando
+                 \texttt{w.grad} com sua fórmula.
+    \end{itemize}
+  \end{exbox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Resumo da aula}
+  \begin{itemize}\setlength{\itemsep}{0.45ex}
+    \item Aprender a rede $=$ estimar os parâmetros $W$ de $f(\vx; W)$ a partir
+          de \textbf{amostras} $(\vx_i, d_i)$ da função-alvo
+    \item A regra do perceptron aprende \emph{um} separador linear em tempo
+          finito (classes separáveis) — mas em redes multicamadas exige
+          rótulos intermediários desconhecidos: \alert{busca combinatória};
+          ADALINE/MADALINE ficaram como curiosidade histórica
+    \item O desbloqueio moderno foi tornar tudo \textbf{diferenciável}:
+          ativações suaves (sigmoide, ReLU, \ldots) $+$ divergência contínua
+          como proxy do erro — o \texttt{autograd} é a materialização disso
+    \item \textbf{ERM:} minimizar o risco empírico
+          $\hat{R}(W) = \frac{1}{N}\sum_i \dive(f(\vx_i; W), d_i)$ — o laço de
+          treinamento do PyTorch é ERM ao pé da letra
+    \item Treinar virou \textbf{otimização de função diferenciável};
+          próxima aula: descida de gradiente
+  \end{itemize}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,101 @@
+%% ============================================================
+%% AULA 14 — Encerramento: o mapa da inteligência computacional
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): fechamento do programa (itens 1 e 2
+%% revistos). Os demais paradigmas (evolutiva, nebulosa,
+%% bio-inspirados) ficam restritos à aula introdutória, por
+%% diretriz do curso.
+%%
+%% Compilar:  latexmk -xelatex aula14.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 14 — Encerramento]{Aula 14: Encerramento — o mapa da inteligência computacional}
+\subtitle[GBC073 — Inteligência Computacional]{Panorama \textbullet\ projeto final \textbullet\ próximos passos}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{Uma função, uma perda, um otimizador}
+    \item<2-> \textbf{Do que vimos ao que o mercado usa}
+    \item<3-> \textbf{Projeto final}
+    \item<4-> \textbf{Próximos passos}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Uma função, uma perda, um otimizador}
+
+\begin{frame}{Uma função, uma perda, um otimizador}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item O curso inteiro em uma frase: escolha uma família de funções,
+          uma perda que mede o erro e um otimizador que desce o gradiente.
+    \item Aula 1: a rede é um aproximador universal.
+    \item Aulas 2--6: representar, aprender, otimizar, generalizar.
+    \item Aulas 7--13: arquiteturas e aplicações — casos particulares do
+          mesmo mapa.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Do que vimos ao que o mercado usa}
+
+\begin{frame}{Do que vimos ao que o mercado usa}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item O que estudamos é a base do que os LLMs, sistemas de visão e
+          recomendação usam.
+    \item Transferência de aprendizado, ajuste fino, avaliação — o ciclo
+          profissional inteiro.
+    \item As ideias clássicas (perceptron, Hopfield, Kohonen) reaparecem
+          dentro dos sistemas modernos.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Projeto final}
+
+\begin{frame}{Projeto final}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Escolher um problema real e aplicar o mapa: dados, modelo, perda,
+          otimização, avaliação.
+    \item Entregar código reproduzível e um relatório curto.
+    \item Critérios: clareza da pergunta, honestidade da avaliação,
+          reprodutibilidade.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Próximos passos}
+
+\begin{frame}{Próximos passos}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Disciplinas que continuam daqui: visão, NLP, aprendizado por
+          reforço (GBC063).
+    \item Para estudar sozinho: os cursos e livros citados ao longo do
+          semestre.
+    \item A regra de ouro: implemente do zero o que quiser entender —
+          e use o pronto para o que quiser construir.
+  \end{itemize}
+\end{frame}
+
+\end{document}

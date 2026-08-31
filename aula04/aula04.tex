@@ -1,0 +1,101 @@
+%% ============================================================
+%% AULA 4 — Aprendendo a rede: Parte 2 (retropropagação)
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): item 2 — regra delta e backpropagation.
+%%
+%% Compilar:  latexmk -xelatex aula04.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 4 — Retropropagação]{Aula 4: Aprendendo a rede — Parte 2: retropropagação}
+\subtitle[GBC073 — Inteligência Computacional]{Regra da cadeia no grafo computacional \textbullet\ autograd \textbullet\ PyTorch}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{O problema do crédito:} quem é responsável por cada erro?
+    \item<2-> \textbf{A regra da cadeia no grafo computacional:} o erro viaja para trás
+    \item<3-> \textbf{A regra delta generalizada:} a atualização de cada peso
+    \item<4-> \textbf{Autograd:} a implementação em PyTorch
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{O problema do crédito}
+
+\begin{frame}{O problema do crédito}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item A rede é uma composição de camadas: $f = f_L \circ \cdots \circ f_1$.
+    \item O erro medido na saída $\erro$ é culpa \emph{compartilhada} de todos os pesos.
+    \item Precisamos atribuir a cada $\pesoij{j}{i}$ a sua parcela de responsabilidade.
+    \item A regra do perceptron só alcança a \emph{última} camada — camadas ocultas
+          ficam sem sinal de aprendizado.
+    \item Retropropagação (\emph{backpropagation}) resolve a atribuição de crédito
+          propagando o gradiente camada a camada.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{A regra da cadeia no grafo computacional}
+
+\begin{frame}{A regra da cadeia no grafo computacional}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item A rede como grafo computacional: nós são operações, arestas são tensores.
+    \item Gradientes locais de cada nó, encadeados pela regra da cadeia.
+    \item Propaga-se para trás a \emph{sensibilidade} do erro a cada ativação.
+    \item Custo da retropropagação: comparável ao da propagação adiante.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{A regra delta generalizada}
+
+\begin{frame}{A regra delta generalizada}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item O erro retropropagado na camada $j$: \(\delta_j = \ativ'(\campo_j) \sum_k \delta_k \pesoij{k}{j}\).
+    \item Atualização: \(\Delta \pesoij{j}{i} = \taxa\, \delta_j\, y_i\).
+    \item A regra delta (Widrow--Hoff) é o caso de uma camada só.
+    \item Funções de ativação diferenciáveis viram requisito — adeus degrau.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Autograd e a implementação em PyTorch}
+
+\begin{frame}{Autograd e a implementação em PyTorch}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Diferenciação automática: o grafo computacional registrado durante o
+          \emph{forward} \texttt{tensor.requires\_grad}.
+    \item \texttt{loss.backward()} percorre o grafo e acumula gradientes.
+    \item \texttt{optimizer.step()} aplica a atualização; \texttt{zero\_grad()}
+          entre passos.
+    \item Não se escreve retropropagação à mão: escreve-se o \emph{forward} e o
+          framework deriva.
+  \end{itemize}
+  \begin{ideiabox}
+    A retropropagação é a regra da cadeia aplicada de trás para frente — o que
+    viaja para trás é a sensibilidade do erro a cada peso.
+  \end{ideiabox}
+\end{frame}
+
+\end{document}

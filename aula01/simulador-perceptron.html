@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playground do Perceptron — GBC073</title>
+<style>
+  /* ============ tokens da disciplina (mesma paleta dos slides) ============ */
+  :root{
+    --azul:#16357C; --azul-claro:#3F6DC4; --ciano:#0D8A99; --magenta:#D12E6E;
+    --dourado:#E9A100; --carmim:#B3121B; --verde:#1E8E5A; --cinza:#55607A;
+    --fundo:#F6F8FC; --fundo-quiz:#FBF4E3; --tinta:#1c2333;
+    --mono:"Fira Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --sans:"Fira Sans", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0; padding:0}
+  body{
+    font-family:var(--sans); color:var(--tinta); background:var(--fundo);
+    line-height:1.45;
+  }
+  /* ============ cabeçalho no estilo da capa dos slides ============ */
+  header{
+    background:var(--azul); color:#fff; padding:1.35rem 1.6rem 1.15rem;
+    border-bottom:4px solid var(--magenta);
+  }
+  header .rotulo{
+    font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+    color:#b9c6ea; margin-bottom:.3rem;
+  }
+  header h1{margin:0; font-size:1.45rem; font-weight:700}
+  header p{margin:.35rem 0 0; color:#d7defa; font-size:.92rem; max-width:60ch}
+  /* ============ bancada: plano + painel ============ */
+  .bancada{
+    display:grid; grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);
+    gap:1.1rem; padding:1.1rem 1.6rem; max-width:1180px; margin:0 auto;
+  }
+  @media (max-width:880px){ .bancada{grid-template-columns:1fr} }
+  .cartao{
+    background:#fff; border:1px solid #e2e7f2; border-radius:8px;
+    box-shadow:0 1px 3px rgba(22,53,124,.06);
+  }
+  /* plano */
+  .plano{position:relative; padding:.65rem}
+  canvas{display:block; width:100%; height:auto; border-radius:6px; cursor:crosshair;
+         touch-action:none}
+  .status{
+    margin:.6rem .1rem 0; padding:.5rem .75rem; border-left:4px solid var(--cinza);
+    background:var(--fundo); border-radius:4px; font-size:.9rem; min-height:2.4rem;
+    display:flex; align-items:center; gap:.5rem;
+  }
+  .status.rodando{border-color:var(--azul-claro)}
+  .status.convergiu{border-color:var(--verde); background:#eef7f2}
+  .status.oscilando{border-color:var(--carmim); background:#fbf0f0}
+  /* painel */
+  .painel{padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.9rem}
+  .painel h2{
+    margin:0; font-size:.72rem; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--cinza); border-bottom:1px solid #e6eaf4; padding-bottom:.35rem;
+  }
+  .chips{display:flex; flex-wrap:wrap; gap:.45rem}
+  .chip{
+    border:1.5px solid var(--azul); color:var(--azul); background:#fff;
+    border-radius:999px; padding:.28rem .85rem; font:600 .85rem var(--sans);
+    cursor:pointer;
+  }
+  .chip[aria-pressed="true"]{background:var(--azul); color:#fff}
+  .chip:focus-visible, button:focus-visible, input:focus-visible{
+    outline:3px solid var(--dourado); outline-offset:2px;
+  }
+  .linhabotoes{display:flex; flex-wrap:wrap; gap:.5rem}
+  button.acao{
+    font:600 .88rem var(--sans); padding:.45rem .9rem; border-radius:6px;
+    border:none; cursor:pointer; background:#e8edf8; color:var(--azul);
+  }
+  button.acao.primaria{background:var(--magenta); color:#fff}
+  button.acao:disabled{opacity:.45; cursor:default}
+  .deslizador{display:flex; align-items:center; gap:.6rem; font-size:.85rem}
+  .deslizador label{min-width:8.5rem; color:var(--cinza)}
+  .deslizador input{flex:1; accent-color:var(--magenta)}
+  .deslizador output{font-family:var(--mono); min-width:3ch; text-align:right}
+  /* leitura de estado */
+  .leitura{
+    font-family:var(--mono); font-size:.86rem; background:var(--fundo);
+    border-radius:6px; padding:.6rem .7rem; display:grid; gap:.15rem;
+  }
+  .leitura b{color:var(--azul)}
+  .modelo{
+    font-family:var(--mono); font-size:.82rem; background:var(--fundo);
+    border-left:4px solid var(--ciano); border-radius:4px; padding:.55rem .7rem;
+    display:grid; gap:.15rem;
+  }
+  .modelo .regra{border-top:1px dashed #d5dcec; margin-top:.3rem; padding-top:.35rem}
+  .fases{display:grid; gap:.3rem}
+  .fase{
+    font-family:var(--mono); font-size:.8rem; border-left:4px solid #dfe4f0;
+    border-radius:4px; padding:.4rem .6rem; background:#fff; color:#9aa3b8;
+    white-space:pre-wrap;
+  }
+  .fase .num{font:700 .68rem var(--sans); letter-spacing:.06em; display:block;
+             color:inherit; margin-bottom:.1rem}
+  .fase.feita{color:var(--tinta); border-color:#c7d2ea; background:var(--fundo)}
+  .fase.atual{color:var(--tinta); border-color:var(--dourado);
+              background:var(--fundo-quiz)}
+  .fase.pulou{opacity:.5}
+  .legenda{font-size:.8rem; color:var(--cinza); display:flex; gap:1rem; flex-wrap:wrap}
+  .ponto-legenda{display:inline-flex; align-items:center; gap:.35rem}
+  .bolinha{width:.75rem; height:.75rem; border-radius:50%; display:inline-block}
+  .b0{background:#fff; border:2.5px solid var(--ciano)}
+  .b1{background:var(--magenta)}
+  .b-err{background:transparent; border:2px dashed var(--carmim)}
+  /* rodapé: como usar + citações */
+  footer{max-width:1180px; margin:0 auto; padding:0 1.6rem 2.2rem}
+  footer .cartao{padding:1rem 1.2rem; margin-top:.2rem}
+  footer h2{font-size:.72rem; letter-spacing:.13em; text-transform:uppercase;
+            color:var(--cinza); margin:0 0 .5rem}
+  footer ul{margin:.2rem 0 .9rem; padding-left:1.1rem; font-size:.88rem}
+  footer li{margin:.18rem 0}
+  .citacoes li{color:#333}
+  .assinatura{font-size:.8rem; color:var(--cinza); margin-top:.6rem;
+              border-top:1px solid #e6eaf4; padding-top:.6rem}
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="rotulo">GBC073 · Inteligência Computacional · Aula 1</div>
+  <h1>Playground do Perceptron</h1>
+  <p>Arraste os pontos, escolha uma porta lógica e observe a reta de decisão
+     obedecer à regra de 1958 — até o dia em que ela não consegue mais.</p>
+</header>
+
+<main class="bancada">
+  <!-- ==================== o plano ==================== -->
+  <section class="cartao plano" aria-label="Plano de entrada">
+    <canvas id="tela" width="640" height="640"
+      aria-label="Plano com os pontos de treino e a reta de decisão"></canvas>
+    <div id="status" class="status">Pronto. Escolha um preset e clique em Executar.</div>
+  </section>
+
+  <!-- ==================== o painel ==================== -->
+  <aside class="cartao painel" aria-label="Controles">
+    <div>
+      <h2>Dados</h2>
+      <div class="chips" role="group" aria-label="Presets de dados">
+        <button class="chip" data-preset="E"   aria-pressed="true">E</button>
+        <button class="chip" data-preset="OU"  aria-pressed="false">OU</button>
+        <button class="chip" data-preset="XOR" aria-pressed="false">XOR</button>
+        <button class="chip" data-preset="LIVRE" aria-pressed="false">Livre</button>
+      </div>
+      <p class="legenda" style="margin:.55rem 0 0">
+        <span class="ponto-legenda"><span class="bolinha b0"></span> classe 0</span>
+        <span class="ponto-legenda"><span class="bolinha b1"></span> classe 1</span>
+        <span class="ponto-legenda"><span class="bolinha b-err"></span> classificado errado</span>
+      </p>
+      <div class="chips" style="margin-top:.55rem" role="group"
+           aria-label="Classe dos novos pontos">
+        <button class="chip" id="arma0" aria-pressed="false"
+                title="Clique no plano para adicionar um ponto da classe 0">+ classe 0</button>
+        <button class="chip" id="arma1" aria-pressed="false"
+                title="Clique no plano para adicionar um ponto da classe 1">+ classe 1</button>
+      </div>
+      <p style="font-size:.78rem; color:var(--cinza); margin:.45rem 0 0">
+        Arraste um ponto para movê-lo · clique duplo remove · clique no plano
+        adiciona (com uma classe armada acima).</p>
+    </div>
+
+    <div>
+      <h2>Modelo e regra (Rosenblatt, 1958)</h2>
+      <div class="modelo" aria-label="Equações do perceptron">
+        <span>v = w·x + b = w₁x₁ + w₂x₂ + b</span>
+        <span>ŷ = φ(v) = 1 se v ≥ 0, senão 0</span>
+        <span class="regra">w ← w + η·(y − ŷ)·x</span>
+        <span>b ← b + η·(y − ŷ)</span>
+      </div>
+    </div>
+
+    <div>
+      <h2>Treino</h2>
+      <div class="linhabotoes" style="margin-top:.55rem">
+        <button class="acao primaria" id="btnRodar">Executar</button>
+        <button class="acao" id="btnSub">Sub-passo</button>
+        <button class="acao" id="btnPasso">Um exemplo</button>
+        <button class="acao" id="btnEpoca">Uma época</button>
+        <button class="acao" id="btnReset">Reiniciar pesos</button>
+      </div>
+      <div class="deslizador" style="margin-top:.7rem">
+        <label for="eta">taxa de aprendizado η</label>
+        <input type="range" id="eta" min="0.05" max="1" step="0.05" value="0.5">
+        <output id="etaVal">0.50</output>
+      </div>
+      <div class="deslizador">
+        <label for="vel">velocidade (passos/s)</label>
+        <input type="range" id="vel" min="1" max="30" step="1" value="6">
+        <output id="velVal">6</output>
+      </div>
+      <p style="font-size:.78rem; color:var(--cinza); margin:.4rem 0 0">
+        Teclado: <kbd>espaço</kbd> executa/pausa · <kbd>s</kbd> sub-passo ·
+        <kbd>e</kbd> um exemplo.</p>
+    </div>
+
+    <div>
+      <h2>Estado</h2>
+      <div class="leitura" id="leitura" aria-live="polite"></div>
+    </div>
+
+    <div>
+      <h2>Passo a passo do aprendizado</h2>
+      <div class="fases" id="fases" aria-live="polite"></div>
+    </div>
+  </aside>
+</main>
+
+<!-- ==================== rodapé: uso + citações ==================== -->
+<footer>
+  <div class="cartao">
+    <h2>O que observar</h2>
+    <ul>
+      <li><b>E</b> e <b>OU</b>: a reta se ajusta e <i>congela</i> — os fantasmas
+          param de nascer. É o teorema de convergência em ação.</li>
+      <li><b>XOR</b>: os fantasmas nunca param — a regra oscila para sempre,
+          porque nenhuma reta separa as duas classes.</li>
+      <li>Aumente η e veja os saltos ficarem maiores; diminua e veja a
+          convergência ficar mais fina (e mais lenta).</li>
+    </ul>
+    <h2>Referências</h2>
+    <ul class="citacoes">
+      <li>Rosenblatt, F. (1958). The perceptron: a probabilistic model for
+          information storage and organization in the brain.
+          <i>Psychological Review</i>, 65(6). — a regra implementada aqui.</li>
+      <li>Novikoff, A. (1962). On convergence proofs on perceptrons.
+          <i>Symposium on the Mathematical Theory of Automata</i>. — por que
+          E e OU convergem em tempo finito.</li>
+      <li>Minsky, M.; Papert, S. (1969). <i>Perceptrons</i>. MIT Press. —
+          por que o XOR não converge nunca.</li>
+      <li>Raj, B. <i>11-785 Introduction to Deep Learning</i>, CMU (S26),
+          Lectures 1–2 — deeplearning.cs.cmu.edu. — a apresentação que esta
+          aula segue.</li>
+      <li>McCulloch, W.; Pitts, W. (1943). A logical calculus of the ideas
+          immanent in nervous activity. <i>Bulletin of Mathematical
+          Biophysics</i>, 5. — o neurônio de limiar.</li>
+    </ul>
+    <div class="assinatura">
+      GBC073 — Inteligência Computacional · Prof. Marcelo Keese Albertini ·
+      FACOM / Universidade Federal de Uberlândia · material de aula, 2026.
+      Página autocontida: funciona offline, sem dependências externas.
+    </div>
+  </div>
+</footer>
+
+<script>
+"use strict";
+/* ================= paleta lida dos tokens ================= */
+const css = getComputedStyle(document.documentElement);
+const C = {
+  azul:  css.getPropertyValue('--azul').trim(),
+  azulC: css.getPropertyValue('--azul-claro').trim(),
+  ciano: css.getPropertyValue('--ciano').trim(),
+  magenta: css.getPropertyValue('--magenta').trim(),
+  dourado: css.getPropertyValue('--dourado').trim(),
+  carmim: css.getPropertyValue('--carmim').trim(),
+  verde: css.getPropertyValue('--verde').trim(),
+  cinza: css.getPropertyValue('--cinza').trim(),
+};
+const reduzMovimento = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= estado ================= */
+const PRESETS = {
+  E:   [[0,0,0],[0,1,0],[1,0,0],[1,1,1]],
+  OU:  [[0,0,0],[0,1,1],[1,0,1],[1,1,1]],
+  XOR: [[0,0,0],[0,1,1],[1,0,1],[1,1,0]],
+};
+let pontos = [];                 // {x1, x2, y}
+let w1=0, w2=0, b=0;             // pesos reais
+let d1=0, d2=0, db=0;            // pesos desenhados (suavizados)
+let eta = 0.5;
+let idx = 0;                     // próximo exemplo
+let epoca = 0, atualizacoes = 0, atualizacoesEpoca = 0, errosUltimaEpoca = null;
+let convergiu = false;
+let rodando = false, timerAcc = 0, ultimoT = null;
+let trilha = [];                 // fantasmas: {w1,w2,b}
+const TRILHA_MAX = 36;
+let presetAtivo = 'E';
+let armaClasse = null;           // null | 0 | 1
+let arrasto = null;              // índice do ponto arrastado
+
+/* ================= canvas ================= */
+const tela = document.getElementById('tela');
+const ctx = tela.getContext('2d');
+const MUNDO = {min:-0.6, max:1.7};                  // plano quadrado
+function dimensiona(){
+  const dpr = window.devicePixelRatio || 1;
+  const w = tela.clientWidth;
+  tela.width = Math.round(w*dpr); tela.height = Math.round(w*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+function px(v){ // mundo -> pixel (x)
+  const w = tela.clientWidth;
+  return (v - MUNDO.min)/(MUNDO.max-MUNDO.min)*w;
+}
+function py(v){ // mundo -> pixel (y invertido)
+  const w = tela.clientWidth;
+  return w - (v - MUNDO.min)/(MUNDO.max-MUNDO.min)*w;
+}
+function mundoX(p){ return MUNDO.min + p/tela.clientWidth*(MUNDO.max-MUNDO.min); }
+function mundoY(p){ const w=tela.clientWidth;
+  return MUNDO.min + (w-p)/w*(MUNDO.max-MUNDO.min); }
+
+/* ================= perceptron ================= */
+const degrau = v => v >= 0 ? 1 : 0;
+function classifica(p, a=w1, c=w2, d=b){ return degrau(a*p.x1 + c*p.x2 + d); }
+function errosAtuais(){ return pontos.filter(p => classifica(p)!==p.y).length; }
+
+/* ---- passo a passo: máquina de 5 fases por exemplo ----
+   0 observar exemplo · 1 campo v · 2 ativação ŷ · 3 erro · 4 atualização  */
+let fase = 0;        // próxima fase a executar (0 = novo exemplo)
+let atual = null;    // exemplo em curso: {i, p, w1a, w2a, ba, v, yhat, erro, dw1, dw2, dbv}
+function subPasso(){
+  if (pontos.length===0 || convergiu) return;
+  if (fase===0){
+    atual = {i:idx, p:{...pontos[idx]}, w1a:w1, w2a:w2, ba:b, eta};
+    fase=1;
+  } else if (fase===1){
+    atual.v = w1*atual.p.x1 + w2*atual.p.x2 + b;  fase=2;
+  } else if (fase===2){
+    atual.yhat = degrau(atual.v);  fase=3;
+  } else if (fase===3){
+    atual.erro = atual.p.y - atual.yhat;  fase=4;
+  } else { // fase 4: atualizar (ou não) e fechar o exemplo
+    if (atual.erro !== 0){
+      trilha.push({w1,w2,b});
+      if (trilha.length>TRILHA_MAX) trilha.shift();
+      atual.dw1 = eta*atual.erro*atual.p.x1;
+      atual.dw2 = eta*atual.erro*atual.p.x2;
+      atual.dbv = eta*atual.erro;
+      w1+=atual.dw1; w2+=atual.dw2; b+=atual.dbv;
+      atualizacoes++; atualizacoesEpoca++;
+    } else { atual.dw1=atual.dw2=atual.dbv=0; }
+    atual.fechado = true;
+    idx = (idx+1) % pontos.length;
+    if (idx===0){ // fechou uma época
+      errosUltimaEpoca = errosAtuais();
+      if (atualizacoesEpoca===0){ convergiu = true; rodando = false; }
+      else { epoca++; atualizacoesEpoca = 0; }
+    }
+    fase=0;
+  }
+  atualizaPainel();
+}
+function passo(){ // completa o exemplo corrente, fase a fase
+  if (pontos.length===0 || convergiu) return;
+  do { subPasso(); } while (fase!==0 && !convergiu);
+}
+function umaEpoca(){ const n = pontos.length; for(let k=0;k<n && !convergiu;k++) passo(); }
+function reiniciaPesos(){
+  w1=w2=b=0; if(reduzMovimento){d1=d2=db=0;}
+  idx=0; epoca=0; atualizacoes=0; atualizacoesEpoca=0;
+  errosUltimaEpoca=null; convergiu=false; trilha=[]; fase=0; atual=null;
+  atualizaPainel();
+}
+function carregaPreset(nome){
+  presetAtivo = nome;
+  document.querySelectorAll('.chip[data-preset]').forEach(c =>
+    c.setAttribute('aria-pressed', c.dataset.preset===nome ? 'true':'false'));
+  if (nome!=='LIVRE') pontos = PRESETS[nome].map(([x1,x2,y])=>({x1,x2,y}));
+  rodando=false; reiniciaPesos();
+}
+function viraLivre(){ // muda só o chip, mantendo os pontos editados
+  presetAtivo='LIVRE';
+  document.querySelectorAll('.chip[data-preset]').forEach(c =>
+    c.setAttribute('aria-pressed', c.dataset.preset==='LIVRE' ? 'true':'false'));
+}
+
+/* ================= desenho ================= */
+function desenhaMeiaPlano(a,c,d,cor){
+  const n = Math.hypot(a,c); if (n<1e-9) return;
+  const nx=a/n, ny=c/n;                 // normal (aponta p/ lado ŷ=1)
+  const p0x=-d*nx/n, p0y=-d*ny/n;       // ponto da reta mais próximo da origem
+  const dx=-ny, dy=nx, L=10;            // direção da reta
+  ctx.save(); ctx.globalAlpha=0.10; ctx.fillStyle=cor;
+  ctx.beginPath();
+  ctx.moveTo(px(p0x+dx*L),  py(p0y+dy*L));
+  ctx.lineTo(px(p0x-dx*L),  py(p0y-dy*L));
+  ctx.lineTo(px(p0x-dx*L+nx*L), py(p0y-dy*L+ny*L));
+  ctx.lineTo(px(p0x+dx*L+nx*L), py(p0y+dy*L+ny*L));
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function desenhaReta(a,c,d,cor,esp,alfa){
+  const n=Math.hypot(a,c); if (n<1e-9) return;
+  const nx=a/n, ny=c/n, p0x=-d*nx/n, p0y=-d*ny/n, dx=-ny, dy=nx, L=10;
+  ctx.save(); ctx.globalAlpha=alfa; ctx.strokeStyle=cor; ctx.lineWidth=esp;
+  ctx.beginPath();
+  ctx.moveTo(px(p0x+dx*L), py(p0y+dy*L));
+  ctx.lineTo(px(p0x-dx*L), py(p0y-dy*L));
+  ctx.stroke(); ctx.restore();
+}
+function desenhaSetaNormal(a,c,d){
+  const n=Math.hypot(a,c); if (n<1e-9) return;
+  const nx=a/n, ny=c/n, p0x=-d*nx/n, p0y=-d*ny/n;
+  const qx=p0x+nx*0.28, qy=p0y+ny*0.28;
+  ctx.save(); ctx.strokeStyle=C.azul; ctx.fillStyle=C.azul; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(px(p0x),py(p0y)); ctx.lineTo(px(qx),py(qy)); ctx.stroke();
+  const ang=Math.atan2(py(qy)-py(p0y), px(qx)-px(p0x));
+  ctx.beginPath();
+  ctx.moveTo(px(qx),py(qy));
+  ctx.lineTo(px(qx)-9*Math.cos(ang-0.42), py(qy)-9*Math.sin(ang-0.42));
+  ctx.lineTo(px(qx)-9*Math.cos(ang+0.42), py(qy)-9*Math.sin(ang+0.42));
+  ctx.closePath(); ctx.fill();
+  ctx.font='600 12px '+css.getPropertyValue('--mono');
+  ctx.fillText('w', px(qx)+6, py(qy)-4);
+  ctx.restore();
+}
+function desenha(tempo){
+  // suaviza a reta desenhada em direção à real
+  if (reduzMovimento){ d1=w1; d2=w2; db=b; }
+  else { const k=0.18; d1+=(w1-d1)*k; d2+=(w2-d2)*k; db+=(b-db)*k; }
+
+  const w = tela.clientWidth;
+  ctx.clearRect(0,0,w,w);
+  // fundo e sombreado das regiões
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,w);
+  desenhaMeiaPlano( d1, d2, db, C.magenta);   // lado ŷ = 1
+  desenhaMeiaPlano(-d1,-d2,-db, C.ciano);     // lado ŷ = 0
+  // grade
+  ctx.strokeStyle='#e6eaf4'; ctx.lineWidth=1;
+  for(let v=-0.5; v<=1.5001; v+=0.5){
+    ctx.beginPath(); ctx.moveTo(px(v),0); ctx.lineTo(px(v),w); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,py(v)); ctx.lineTo(w,py(v)); ctx.stroke();
+  }
+  // eixos
+  ctx.strokeStyle='#c3cbe0'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(px(0),0); ctx.lineTo(px(0),w); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,py(0)); ctx.lineTo(w,py(0)); ctx.stroke();
+  ctx.fillStyle=C.cinza; ctx.font='12px '+css.getPropertyValue('--mono');
+  ctx.fillText('x₁', w-22, py(0)-8);
+  ctx.fillText('x₂', px(0)+8, 16);
+  ctx.fillText('1', px(1)-3, py(0)+16);
+  ctx.fillText('1', px(0)-14, py(1)+4);
+  // trilha de fantasmas (assinatura da página)
+  trilha.forEach((t,i)=>{
+    const alfa = 0.04 + 0.30*(i+1)/trilha.length;
+    desenhaReta(t.w1,t.w2,t.b, C.azulC, 1.4, alfa);
+  });
+  // reta atual + normal
+  desenhaReta(d1,d2,db, C.azul, 3, 1);
+  desenhaSetaNormal(d1,d2,db);
+  if (Math.hypot(w1,w2)<1e-9){
+    ctx.fillStyle=C.cinza; ctx.font='13px '+css.getPropertyValue('--sans');
+    ctx.fillText('pesos zerados — ainda não há reta; dê um passo', 14, w-14);
+  }
+  // pontos
+  const pulso = reduzMovimento ? 0 : 2.2*Math.sin((tempo||0)/300);
+  pontos.forEach((p,i)=>{
+    const X=px(p.x1), Y=py(p.x2), errado = classifica(p)!==p.y;
+    if (i===idx && !convergiu){          // exemplo da vez: halo dourado
+      ctx.beginPath(); ctx.arc(X,Y,13+pulso,0,7);
+      ctx.strokeStyle=C.dourado; ctx.lineWidth=3; ctx.globalAlpha=.9;
+      ctx.stroke(); ctx.globalAlpha=1;
+    }
+    if (errado){                          // anel carmim tracejado
+      ctx.beginPath(); ctx.setLineDash([4,3]); ctx.arc(X,Y,10.5,0,7);
+      ctx.strokeStyle=C.carmim; ctx.lineWidth=2; ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.beginPath(); ctx.arc(X,Y,6.5,0,7);
+    if (p.y===1){ ctx.fillStyle=C.magenta; ctx.fill(); }
+    else { ctx.fillStyle='#fff'; ctx.fill();
+           ctx.strokeStyle=C.ciano; ctx.lineWidth=3; ctx.stroke(); }
+  });
+  requestAnimationFrame(laco);
+}
+/* ================= laço de execução ================= */
+function laco(t){
+  if (rodando && !convergiu){
+    if (ultimoT===null) ultimoT=t;
+    timerAcc += (t-ultimoT);
+    const intervalo = 1000/Number(document.getElementById('vel').value);
+    while (timerAcc >= intervalo && rodando && !convergiu){
+      timerAcc -= intervalo; passo();
+    }
+  }
+  ultimoT = t;
+  desenha(t);
+}
+/* ================= painel ================= */
+const fmt = x => (x>=0?'+':'') + x.toFixed(2);
+function atualizaPainel(){
+  const nerr = pontos.length ? errosAtuais() : 0;
+  document.getElementById('leitura').innerHTML =
+    `<span><b>w</b> = (${fmt(w1)}, ${fmt(w2)})   <b>b</b> = ${fmt(b)}</span>`+
+    `<span>época <b>${epoca}</b> · atualizações <b>${atualizacoes}</b>`+
+    ` · erros agora <b>${nerr}</b>/${pontos.length}</span>`;
+  renderFases();
+  // status
+  const st = document.getElementById('status');
+  st.classList.remove('rodando','convergiu','oscilando');
+  if (convergiu){
+    st.classList.add('convergiu');
+    st.textContent = `Convergiu após ${atualizacoes} atualizações — os dados são `+
+      `linearmente separáveis (Novikoff, 1962).`;
+  } else if (epoca >= 25){
+    st.classList.add('oscilando');
+    st.textContent = `${epoca} épocas sem convergir — estes dados não são `+
+      `linearmente separáveis (Minsky & Papert, 1969). A regra vai oscilar para sempre.`;
+  } else if (rodando){
+    st.classList.add('rodando');
+    st.textContent = `Treinando… época ${epoca}, ${atualizacoes} atualizações.`;
+  } else {
+    st.textContent = 'Pausado. Executar, Um exemplo ou Uma época.';
+  }
+  document.getElementById('btnRodar').textContent = rodando ? 'Pausar' : 'Executar';
+}
+/* ---- painel do passo a passo: 5 fases com números substituídos ---- */
+const n1 = x => x.toFixed(1), n2 = x => x.toFixed(2);
+function renderFases(){
+  const alvo = document.getElementById('fases');
+  const u = atual, f = fase;
+  // textos simbólicos (antes) e numéricos (depois de cada fase)
+  const linhas = [
+    { t:'1 · observar o exemplo',
+      sim:'x = (x₁, x₂),  y = classe',
+      num: u ? `exemplo ${u.i+1}:  x = (${n1(u.p.x1)}, ${n1(u.p.x2)}),  y = ${u.p.y}` : null,
+      ok: f>=1 || (u && u.fechado) },
+    { t:'2 · campo local induzido',
+      sim:'v = w₁x₁ + w₂x₂ + b',
+      num: u && u.v!==undefined ?
+        `v = ${n2(u.w1a)}·${n1(u.p.x1)} + ${n2(u.w2a)}·${n1(u.p.x2)} + ${n2(u.ba)} = ${n2(u.v)}` : null,
+      ok: f>=2 || (u && u.fechado) },
+    { t:'3 · ativação (degrau)',
+      sim:'ŷ = φ(v) = 1 se v ≥ 0, senão 0',
+      num: u && u.yhat!==undefined ?
+        `ŷ = φ(${n2(u.v)}) = ${u.yhat}` : null,
+      ok: f>=3 || (u && u.fechado) },
+    { t:'4 · erro',
+      sim:'e = y − ŷ',
+      num: u && u.erro!==undefined ?
+        `e = ${u.p.y} − ${u.yhat} = ${u.erro>0?'+':''}${u.erro}` : null,
+      ok: f>=4 || (u && u.fechado) },
+    { t:'5 · atualização',
+      sim:'w ← w + η·e·x,   b ← b + η·e',
+      num: u && u.fechado ?
+        (u.erro===0
+          ? 'e = 0 → acertou, nada a atualizar'
+          : `Δw = ${n2(u.eta)}·(${u.erro})·x = (${fmt(u.dw1)}, ${fmt(u.dw2)})\nΔb = ${fmt(u.dbv)}  →  w = (${fmt(w1)}, ${fmt(w2)}),  b = ${fmt(b)}`)
+        : null,
+      ok: u && u.fechado,
+      pulou: u && u.fechado && u.erro===0 }
+  ];
+  const proxima = (u && !u.fechado) ? f : 0; // fase destacada como "a seguir"
+  alvo.innerHTML = linhas.map((L,i)=>{
+    const feita = L.ok && L.num!==null;
+    const atualCls = (!feita && i===proxima && !convergiu) ? ' atual' : '';
+    const cls = 'fase' + (feita?' feita':'') + atualCls + (L.pulou?' pulou':'');
+    const corpo = feita ? L.num : L.sim;
+    return `<div class="${cls}"><span class="num">${L.t}</span>${corpo}</div>`;
+  }).join('');
+}
+
+/* ================= interações ================= */
+document.querySelectorAll('.chip[data-preset]').forEach(c =>
+  c.addEventListener('click', ()=>carregaPreset(c.dataset.preset)));
+const arma0=document.getElementById('arma0'), arma1=document.getElementById('arma1');
+function armar(cl){
+  armaClasse = (armaClasse===cl) ? null : cl;
+  arma0.setAttribute('aria-pressed', armaClasse===0 ? 'true':'false');
+  arma1.setAttribute('aria-pressed', armaClasse===1 ? 'true':'false');
+}
+arma0.addEventListener('click', ()=>armar(0));
+arma1.addEventListener('click', ()=>armar(1));
+
+document.getElementById('btnRodar').addEventListener('click', ()=>{
+  if (convergiu) return;
+  rodando = !rodando; timerAcc=0; atualizaPainel();
+});
+document.getElementById('btnSub').addEventListener('click', ()=>{rodando=false; subPasso();});
+document.getElementById('btnPasso').addEventListener('click', ()=>{rodando=false; passo();});
+document.getElementById('btnEpoca').addEventListener('click', ()=>{rodando=false; umaEpoca();});
+document.getElementById('btnReset').addEventListener('click', reiniciaPesos);
+document.getElementById('eta').addEventListener('input', e=>{
+  eta = Number(e.target.value);
+  document.getElementById('etaVal').textContent = eta.toFixed(2);
+});
+document.getElementById('vel').addEventListener('input', e=>{
+  document.getElementById('velVal').textContent = e.target.value;
+});
+document.addEventListener('keydown', e=>{
+  if (e.target.tagName==='INPUT') return;
+  if (e.code==='Space'){ e.preventDefault();
+    if(!convergiu){ rodando=!rodando; timerAcc=0; atualizaPainel(); } }
+  if (e.key==='s'){ rodando=false; subPasso(); }
+  if (e.key==='e'){ rodando=false; passo(); }
+});
+/* arrastar / adicionar / remover pontos */
+function pontoSob(ev){
+  const r = tela.getBoundingClientRect();
+  const mx = ev.clientX-r.left, my = ev.clientY-r.top;
+  for (let i=pontos.length-1;i>=0;i--){
+    const p=pontos[i];
+    if (Math.hypot(px(p.x1)-mx, py(p.x2)-my) < 14) return i;
+  }
+  return -1;
+}
+tela.addEventListener('pointerdown', ev=>{
+  const i = pontoSob(ev);
+  if (i>=0){ arrasto=i; tela.setPointerCapture(ev.pointerId); }
+  else if (armaClasse!==null){
+    const r=tela.getBoundingClientRect();
+    pontos.push({x1:mundoX(ev.clientX-r.left), x2:mundoY(ev.clientY-r.top), y:armaClasse});
+    viraLivre(); reiniciaPesos();
+  }
+});
+tela.addEventListener('pointermove', ev=>{
+  if (arrasto===null) return;
+  const r=tela.getBoundingClientRect();
+  pontos[arrasto].x1 = Math.max(MUNDO.min, Math.min(MUNDO.max, mundoX(ev.clientX-r.left)));
+  pontos[arrasto].x2 = Math.max(MUNDO.min, Math.min(MUNDO.max, mundoY(ev.clientY-r.top)));
+  viraLivre(); convergiu=false; fase=0; atual=null; atualizaPainel();
+});
+tela.addEventListener('pointerup', ()=>{ arrasto=null; });
+tela.addEventListener('dblclick', ev=>{
+  const i = pontoSob(ev);
+  if (i>=0){ pontos.splice(i,1); viraLivre();
+             if(idx>=pontos.length) idx=0; reiniciaPesos(); }
+});
+window.addEventListener('resize', dimensiona);
+
+/* ================= partida ================= */
+dimensiona();
+carregaPreset('E');
+requestAnimationFrame(laco);
+</script>
+</body>
+</html>

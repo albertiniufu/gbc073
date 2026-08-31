@@ -1,0 +1,114 @@
+%% ============================================================
+%% AULA 11 — Memória e mapas: Hopfield, Kohonen e aprendizado
+%%           hebbiano
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): item 2 — arquiteturas Hopfield e
+%% Kohonen; aprendizagem não-supervisionada;
+%% aplicações (clusterização).
+%%
+%% Compilar:  latexmk -xelatex aula11.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 11 — Hopfield e Kohonen]{Aula 11: Memória e mapas — Hopfield, Kohonen e aprendizado hebbiano}
+\subtitle[GBC073 — Inteligência Computacional]{Hebb \textbullet\ memória associativa \textbullet\ energia \textbullet\ mapas auto-organizáveis}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{A regra de Hebb:} neurônios que disparam juntos, se conectam
+    \item<2-> \textbf{Hopfield:} memória associativa e função de energia
+    \item<3-> \textbf{Kohonen:} mapas auto-organizáveis e aprendizado competitivo
+    \item<4-> \textbf{Hopfield moderno:} a ponte para a atenção
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{A regra de Hebb}
+
+\begin{frame}{A regra de Hebb (neurônios que disparam juntos)}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item ``Neurônios que disparam juntos, se conectam'': Hebb (1949).
+    \item Regra de aprendizado local: \(\Delta \pesoij{j}{i} = \taxa\, y_j\, y_i\)
+          — sem rótulo, sem erro.
+    \item É aprendizado por \emph{correlação}, não por correção.
+    \item Raiz comum do que vem a seguir: Hopfield (memória) e Kohonen
+          (mapas).
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Hopfield: memória associativa e energia}
+
+\begin{frame}{Hopfield: memória associativa e energia}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Memória associativa: recordar o padrão inteiro a partir de um
+          pedaço (ou de uma versão corrompida).
+    \item Pesos simétricos, atualização assíncrona — a dinâmica desce a
+          função de energia.
+    \item Padrões memorizados viram mínimos de energia; a rede ``cai'' no
+          mais próximo.
+    \item Capacidade limitada e estados espúrios: o preço da simplicidade.
+  \end{itemize}
+  \begin{alertabox}
+    A rede de Hopfield não ``raciocina'': ela desce uma superfície de energia
+    até o padrão memorizado mais próximo — nada mais, nada menos.
+  \end{alertabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Kohonen: mapas auto-organizáveis}
+
+\begin{frame}{Kohonen: mapas auto-organizáveis e aprendizado competitivo}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Mapa auto-organizável (SOM): uma grade de neurônios que se molda
+          aos dados.
+    \item Aprendizado competitivo: o neurônio mais próximo do exemplo vence —
+          e atualiza a si e aos vizinhos.
+    \item A grade preserva a topologia dos dados: entradas parecidas ativam
+          regiões vizinhas.
+    \item Uso clássico: visualização e clusterização de dados de alta
+          dimensão.
+  \end{itemize}
+  \begin{ideiabox}
+    O SOM é clusterização com uma restrição a mais: os clusters precisam
+    morar em uma grade — o que a torna também um mapa.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Hopfield moderno}
+
+\begin{frame}{Hopfield moderno: a ponte para a atenção}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Hopfield moderno (Ramsauer et al., 2020): atualização exponencial,
+          memória contínua.
+    \item Equivalência com a atenção: o self-attention é uma rede de Hopfield
+          moderna.
+    \item As memórias dos anos 1980 reaparecem dentro dos transformers.
+    \item Fechando o ciclo com a aula 9 — e com a própria ficha da
+          disciplina.
+  \end{itemize}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,103 @@
+%% ============================================================
+%% AULA 5 — Treinar é otimizar: descida de gradiente e variações
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): item 2 — aprendizagem supervisionada;
+%% projeto de redes (parâmetros, modos de treinamento).
+%%
+%% Compilar:  latexmk -xelatex aula05.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 5 — Otimização]{Aula 5: Treinar é otimizar — descida de gradiente e suas variações}
+\subtitle[GBC073 — Inteligência Computacional]{SGD e mini-batch \textbullet\ momentum \textbullet\ Adam \textbullet\ inicialização}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{As três descidas:} batch, estocástica e mini-batch
+    \item<2-> \textbf{Momentum e descida acelerada}
+    \item<3-> \textbf{Métodos adaptativos:} AdaGrad, RMSProp, Adam
+    \item<4-> \textbf{Inicialização e taxas de aprendizado}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{As três descidas}
+
+\begin{frame}{As três descidas (batch, estocástica, mini-batch)}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Descida de gradiente em lote: gradiente exato, caro, sem ruído.
+    \item Descida estocástica (SGD): um exemplo por passo — ruído alto, escapa
+          de mínimos ruins, converge devagar.
+    \item Mini-batch: o meio-termo prático; o ruído vira aliado.
+    \item Compromisso exploração\,/\,explotação dentro do próprio treino.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Momentum e descida acelerada}
+
+\begin{frame}{Momentum e descida acelerada}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Momentum: acumula velocidade na direção consistente do gradiente.
+    \item Atravessa platôs e vales estreitos mais rápido.
+    \item NAG (Nesterov): avalia o gradiente \emph{à frente}, no ponto onde a
+          velocidade já levou.
+    \item Interpretação física: bola rolando vs.\ degrau a cada passo.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Métodos adaptativos}
+
+\begin{frame}{Métodos adaptativos (AdaGrad, RMSProp, Adam)}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item AdaGrad: taxa por parâmetro, dividida pela soma histórica dos
+          gradientes ao quadrado — morre devagar.
+    \item RMSProp: média móvel em vez de soma — esquece o passado distante.
+    \item Adam: momentum + RMSProp, com correção de viés no início do treino.
+    \item Adam é o padrão de fato em deep learning; entenda o que ajusta.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Inicialização e taxas de aprendizado}
+
+\begin{frame}{Inicialização e taxas de aprendizado}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Inicialização importa: pesos constantes ou grandes demais matam o
+          sinal (ou o gradiente).
+    \item Xavier/Glorot e He: variância calibrada pela largura da camada.
+    \item Taxa de aprendizado: pequena demais é lenta; grande demais diverge.
+    \item Agendamentos (\emph{schedules}): decaimento, warm-up, cosine annealing.
+  \end{itemize}
+  \begin{quizbox}
+    Adam com taxa $\taxa = 1$ tende a convergir mais rápido do que com
+    $\taxa = 10^{-3}$, pois aprende com passos maiores.
+
+    \smallskip
+    \opcoes{Verdadeiro \;/\; Falso}
+  \end{quizbox}
+\end{frame}
+
+\end{document}

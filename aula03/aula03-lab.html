@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aula 3 · Laboratório — Aprendendo a rede | GBC073</title>
+<style>
+/* ============ tokens (identidade GBC073) ============ */
+:root{
+  --azul:#16357C; --azul-claro:#3F6DC4; --ciano:#0D8A99; --magenta:#D12E6E;
+  --dourado:#E9A100; --carmim:#B3121B; --verde:#1E8E5A; --cinza:#55607A;
+  --fundo:#F5F7FC; --cartao:#FFFFFF; --tinta:#141A2E; --linha:#E3E8F4;
+  --fonte:"Fira Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"Fira Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --raio:10px; --filete:4px;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html{font-size:17px}
+body{font-family:var(--fonte); background:var(--fundo); color:var(--tinta); min-height:100vh}
+button{font-family:inherit; font-size:inherit; cursor:pointer}
+
+/* ============ cabeçalho ============ */
+header{
+  background:var(--azul); color:#fff; padding:.7rem 1.4rem .8rem;
+  display:flex; flex-wrap:wrap; align-items:flex-end; gap:1rem 2rem;
+  position:sticky; top:0; z-index:10; box-shadow:0 2px 10px rgba(20,26,46,.18);
+}
+.marca .olho{font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:#B9C6E8; font-weight:600}
+.marca h1{font-size:1.25rem; font-weight:800; letter-spacing:-.01em; line-height:1.15}
+.marca h1 em{font-style:normal; color:#FFD37A}
+.marca .sub{margin-top:2px; width:64px; height:3px; background:var(--magenta); border-radius:2px}
+nav{display:flex; gap:.4rem; margin-left:auto; align-items:center}
+nav .atalho{font:600 .68rem var(--mono); color:#B9C6E8; margin-right:.6rem}
+.tab{
+  border:0; border-radius:8px 8px 0 0; padding:.5rem .95rem .55rem;
+  background:rgba(255,255,255,.10); color:#DDE5F7; font-weight:600; font-size:.85rem;
+  border-bottom:3px solid transparent; transition:background .15s;
+}
+.tab:hover{background:rgba(255,255,255,.2)}
+.tab[aria-selected="true"]{background:var(--fundo); color:var(--azul); border-bottom-color:var(--acc,var(--magenta))}
+.tab .num{font-family:var(--mono); font-size:.72rem; opacity:.75; margin-right:.35rem}
+.tab[data-acc="ciano"]{--acc:var(--ciano)} .tab[data-acc="dourado"]{--acc:var(--dourado)} .tab[data-acc="magenta"]{--acc:var(--magenta)}
+
+/* ============ demos ============ */
+main{max-width:1240px; margin:0 auto; padding:1.1rem 1.2rem 2.5rem}
+.demo{display:none; animation:entra .18s ease-out}
+.demo.ativa{display:block}
+@keyframes entra{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){ .demo{animation:none} }
+
+.titulo-demo{display:flex; align-items:baseline; gap:.8rem; margin:.2rem 0 .8rem; flex-wrap:wrap}
+.titulo-demo h2{font-size:1.35rem; font-weight:800; letter-spacing:-.01em}
+.titulo-demo .tese{color:var(--cinza); font-size:.92rem}
+
+.grade{display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:1rem; align-items:start}
+@media (max-width:980px){ .grade{grid-template-columns:1fr} }
+
+.palco{
+  background:var(--cartao); border-radius:var(--raio); border-left:var(--filete) solid var(--acc);
+  box-shadow:0 1px 4px rgba(20,26,46,.08); padding:.8rem .9rem .9rem; min-width:0;
+}
+.hud{display:flex; gap:1.4rem; flex-wrap:wrap; font:600 .8rem var(--mono); color:var(--cinza); margin-bottom:.55rem}
+.hud b{color:var(--tinta); font-weight:700}
+.badge{padding:.12rem .55rem; border-radius:99px; font:700 .72rem var(--mono); color:#fff; background:var(--cinza)}
+.badge.ok{background:var(--verde)} .badge.no{background:var(--carmim)} .badge.rodando{background:var(--dourado); color:#3a2a00}
+canvas{display:block; width:100%; height:auto; border-radius:6px; background:#FBFCFF; border:1px solid var(--linha)}
+
+.painel{background:var(--cartao); border-radius:var(--raio); box-shadow:0 1px 4px rgba(20,26,46,.08); padding:.9rem 1rem 1rem}
+.painel h3{font-size:.7rem; letter-spacing:.13em; text-transform:uppercase; color:var(--cinza); margin:.9rem 0 .45rem}
+.painel h3:first-child{margin-top:0}
+.linha-botoes{display:flex; flex-wrap:wrap; gap:.4rem}
+.btn{
+  border:1.5px solid var(--linha); background:#fff; border-radius:8px; padding:.42rem .7rem;
+  font-weight:600; font-size:.85rem; color:var(--tinta); transition:border-color .12s, background .12s;
+}
+.btn:hover{border-color:var(--acc)}
+.btn.primario{background:var(--acc); border-color:var(--acc); color:#fff}
+.btn.ligado{background:var(--acc); border-color:var(--acc); color:#fff}
+.btn:focus-visible, .tab:focus-visible, input:focus-visible{outline:3px solid var(--dourado); outline-offset:2px}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+
+.campo{margin:.35rem 0 .55rem}
+.campo label{display:flex; justify-content:space-between; font-size:.82rem; color:var(--cinza); font-weight:600}
+.campo label output{font-family:var(--mono); color:var(--tinta)}
+input[type=range]{width:100%; accent-color:var(--acc)}
+
+.log{
+  font:600 .76rem var(--mono); background:var(--fundo); border-radius:6px;
+  padding:.5rem .6rem; margin-top:.6rem; min-height:2.4rem; color:var(--cinza); line-height:1.5;
+}
+.log b{color:var(--acc)}
+.aviso{
+  display:none; margin-top:.6rem; border-left:4px solid var(--carmim); background:#FBEEEF;
+  border-radius:6px; padding:.5rem .7rem; font-size:.82rem; line-height:1.4;
+}
+.aviso.mostra{display:block}
+.aviso b{color:var(--carmim)}
+
+/* barra de treino (ecoa a barra de progresso do deck) */
+.progresso{height:6px; background:var(--linha); border-radius:4px; overflow:hidden; margin:.45rem 0 .6rem}
+.progresso i{display:block; height:100%; width:0%; background:var(--acc); border-radius:4px; transition:width .2s linear}
+
+/* régua "para conduzir em aula" */
+.observar{
+  margin-top:1rem; background:#FDF6EC; border-left:var(--filete) solid var(--dourado);
+  border-radius:var(--raio); padding:.75rem 1rem;
+}
+.observar h3{font-size:.72rem; letter-spacing:.13em; text-transform:uppercase; color:#8a6200; margin-bottom:.35rem}
+.observar ul{margin-left:1.1rem; font-size:.88rem; line-height:1.5}
+.observar li{margin:.15rem 0}
+
+.legenda{display:flex; gap:1.1rem; flex-wrap:wrap; font-size:.78rem; color:var(--cinza); margin-top:.5rem; font-weight:600}
+.legenda i{display:inline-block; width:.75em; height:.75em; border-radius:50%; margin-right:.3em; vertical-align:-.06em}
+
+footer{max-width:1240px; margin:0 auto; padding:0 1.2rem 1.5rem; color:var(--cinza); font-size:.75rem}
+kbd{font:600 .72rem var(--mono); background:#fff; border:1px solid var(--linha); border-bottom-width:2px; border-radius:4px; padding:.05rem .35rem}
+.d1{--acc:var(--ciano)} .d2{--acc:var(--dourado)} .d3{--acc:var(--magenta)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca">
+    <div class="olho">GBC073 — Inteligência Computacional · FACOM/UFU · Prof. Marcelo Keese Albertini</div>
+    <h1>Aula 3 · Aprendendo a rede — <em>laboratório</em></h1>
+    <div class="sub"></div>
+  </div>
+  <nav role="tablist" aria-label="Experimentos">
+    <span class="atalho">1·2·3 troca &nbsp; espaço roda</span>
+    <button class="tab" role="tab" id="tab1" data-acc="ciano"   aria-selected="true"  aria-controls="demo1"><span class="num">1</span>Perceptron</button>
+    <button class="tab" role="tab" id="tab2" data-acc="dourado" aria-selected="false" aria-controls="demo2"><span class="num">2</span>Degrau × Sigmoide</button>
+    <button class="tab" role="tab" id="tab3" data-acc="magenta" aria-selected="false" aria-controls="demo3"><span class="num">3</span>ERM ao vivo</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ================================================================
+     DEMO 1 — Perceptron de Rosenblatt
+================================================================ -->
+<section class="demo d1 ativa" id="demo1" role="tabpanel" aria-labelledby="tab1">
+  <div class="titulo-demo">
+    <h2>A regra do perceptron em ação</h2>
+    <span class="tese">errou um positivo? some o ponto a <b>w</b>. Errou um negativo? subtraia. Só isso — e converge, <em>se</em> as classes forem separáveis.</span>
+  </div>
+  <div class="grade">
+    <div class="palco">
+      <div class="hud">
+        <span>atualizações <b id="p-upd">0</b></span>
+        <span>erros na época <b id="p-err">—</b></span>
+        <span>w = <b id="p-w">(0, 0, 0)</b></span>
+        <span class="badge" id="p-badge">parado</span>
+      </div>
+      <canvas id="c1" width="960" height="620" aria-label="Plano com pontos de duas classes e a reta do perceptron"></canvas>
+      <div class="legenda">
+        <span><i style="background:var(--magenta)"></i>classe +1</span>
+        <span><i style="background:var(--azul-claro)"></i>classe −1</span>
+        <span><i style="background:transparent;border:2px solid var(--carmim);border-radius:50%"></i>mal classificado</span>
+        <span style="color:var(--ciano)">➤ vetor <b>w</b> (normal à reta, aponta para +1)</span>
+      </div>
+    </div>
+    <aside class="painel">
+      <h3>Dados</h3>
+      <div class="linha-botoes">
+        <button class="btn" id="p-sep">Separáveis</button>
+        <button class="btn" id="p-nsep">Não separáveis</button>
+        <button class="btn" id="p-clr">Limpar</button>
+      </div>
+      <h3>Clique no plano adiciona ponto da classe</h3>
+      <div class="linha-botoes">
+        <button class="btn ligado" id="p-cls-pos" style="--acc:var(--magenta)">+1</button>
+        <button class="btn" id="p-cls-neg" style="--acc:var(--azul-claro)">−1</button>
+      </div>
+      <h3>Treino (regra de Rosenblatt)</h3>
+      <div class="linha-botoes">
+        <button class="btn" id="p-passo">1 passo</button>
+        <button class="btn" id="p-epoca">1 época</button>
+        <button class="btn primario" id="p-run">▶ Rodar</button>
+        <button class="btn" id="p-reset">Reiniciar w</button>
+      </div>
+      <div class="log" id="p-log">w inicial aleatório. Um <b>passo</b> procura o próximo ponto mal classificado e aplica w ← w + y·x̃.</div>
+      <div class="aviso" id="p-aviso"><b>Não separável:</b> nenhuma reta é perfeita — o algoritmo corrige um ponto e estraga outro, para sempre. Observe o contador crescer sem convergir.</div>
+    </aside>
+  </div>
+  <div class="observar">
+    <h3>Para conduzir em aula</h3>
+    <ul>
+      <li>Rode passo a passo: a reta <em>pula</em> a cada erro — por que a atualização w + y·x̃ gira a reta na direção certa?</li>
+      <li>Aproxime as classes clicando pontos na fronteira: o que acontece com o nº de atualizações? (lembre o limitante (R/γ)²: margem γ pequena ⇒ muitos passos)</li>
+      <li>Troque para <b>não separáveis</b> e rode: convergiu? Este é o primeiro encontro do modelo de 1958 com dados reais.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================
+     DEMO 2 — Degrau × Sigmoide: por que precisamos de gradiente
+================================================================ -->
+<section class="demo d2" id="demo2" role="tabpanel" aria-labelledby="tab2">
+  <div class="titulo-demo">
+    <h2>Degrau × Sigmoide: quem tem uma bússola?</h2>
+    <span class="tese">o erro 0/1 é uma escada plana — sem derivada, sem direção. A perda contínua sabe para onde descer.</span>
+  </div>
+  <div class="grade">
+    <div class="palco">
+      <div class="hud">
+        <span>limiar b = <b id="g-b">0,00</b></span>
+        <span>erro 0/1 = <b id="g-e01">—</b></span>
+        <span>perda contínua = <b id="g-bce">—</b></span>
+        <span>dL/db = <b id="g-grad">—</b></span>
+      </div>
+      <canvas id="c2" width="960" height="640" aria-label="Dados 1D com sigmoide e as duas curvas de perda em função do limiar"></canvas>
+    </div>
+    <aside class="painel">
+      <h3 style="text-transform:none; letter-spacing:.02em">Modelo: &nbsp;p(y=1|x) = σ(k·(x − b))</h3>
+      <div class="campo">
+        <label>limiar b <output id="g-b-out">0,00</output></label>
+        <input type="range" id="g-b-sl" min="-1" max="1" step="0.005" value="0.55">
+      </div>
+      <div class="campo">
+        <label>inclinação k da sigmoide <output id="g-k-out">6</output></label>
+        <input type="range" id="g-k-sl" min="2" max="14" step="0.5" value="6">
+      </div>
+      <div class="campo">
+        <label>sobreposição das classes <output id="g-ov-out">0,15</output></label>
+        <input type="range" id="g-ov-sl" min="0" max="0.55" step="0.01" value="0.15">
+      </div>
+      <h3>Descida de gradiente sobre b</h3>
+      <div class="linha-botoes">
+        <button class="btn" id="g-desce01">▼ no erro 0/1</button>
+        <button class="btn primario" id="g-desceC">▼ na perda contínua</button>
+        <button class="btn" id="g-novo">Novos dados</button>
+      </div>
+      <div class="log" id="g-log">Arraste <b>b</b> sobre um trecho plano da escada: o erro 0/1 não muda — nenhuma pista de direção.</div>
+      <div class="aviso" id="g-aviso"><b>Derivada = 0.</b> Sobre o erro 0/1, o gradiente é nulo em (quase) todo lugar: o passo de descida <em>não move</em> o limiar. É exatamente o problema das redes de degraus.</div>
+    </aside>
+  </div>
+  <div class="observar">
+    <h3>Para conduzir em aula</h3>
+    <ul>
+      <li>Deslize b devagar: a escada (erro 0/1) só salta quando b cruza um ponto; a curva suave muda <em>sempre</em> — e a inclinação diz para onde ir.</li>
+      <li>Clique “▼ no erro 0/1” com b num platô: nada acontece. Depois “▼ na perda contínua”: b desliza sozinho ao mínimo.</li>
+      <li>Aumente k: a sigmoide vira quase um degrau — e a perda contínua começa a virar escada. O que isso sugere sobre gradientes que “somem”?</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================
+     DEMO 3 — ERM ao vivo: MLP treinando no navegador
+================================================================ -->
+<section class="demo d3" id="demo3" role="tabpanel" aria-labelledby="tab3">
+  <div class="titulo-demo">
+    <h2>Minimização de risco empírico, ao vivo</h2>
+    <span class="tese">um MLP 2–12–12–1 de verdade, treinado por gradiente aqui no navegador. O laço é o mesmo do PyTorch: forward · perda · backward · passo.</span>
+  </div>
+  <div class="grade">
+    <div class="palco">
+      <div class="hud">
+        <span>época <b id="m-ep">0</b></span>
+        <span>risco empírico R̂ = <b id="m-loss">—</b></span>
+        <span>acurácia <b id="m-acc">—</b></span>
+        <span class="badge" id="m-badge">parado</span>
+      </div>
+      <div class="progresso" title="acurácia no conjunto de treinamento"><i id="m-prog"></i></div>
+      <canvas id="c3" width="880" height="620" aria-label="Fronteira de decisão do MLP sobre os dados de treinamento"></canvas>
+      <div class="legenda">
+        <span><i style="background:var(--magenta)"></i>classe 1</span>
+        <span><i style="background:var(--azul-claro)"></i>classe 0</span>
+        <span>fundo = probabilidade prevista f(x; W)</span>
+      </div>
+    </div>
+    <aside class="painel">
+      <h3>Função-alvo (amostras d<sub>i</sub> = g(x<sub>i</sub>))</h3>
+      <div class="linha-botoes">
+        <button class="btn ligado" data-ds="losango">Losango</button>
+        <button class="btn" data-ds="xor">XOR</button>
+        <button class="btn" data-ds="circulo">Círculo</button>
+        <button class="btn" data-ds="luas">Luas</button>
+      </div>
+      <h3>Ativação das camadas ocultas</h3>
+      <div class="linha-botoes">
+        <button class="btn ligado" data-act="tanh">tanh</button>
+        <button class="btn" data-act="relu">ReLU</button>
+        <button class="btn" data-act="sigmoid">sigmoide</button>
+        <button class="btn" data-act="degrau" style="--acc:var(--carmim)">degrau ⚠</button>
+      </div>
+      <div class="campo" style="margin-top:.7rem">
+        <label>taxa de aprendizado η <output id="m-lr-out">0,80</output></label>
+        <input type="range" id="m-lr" min="-2" max="0.48" step="0.02" value="-0.097">
+      </div>
+      <h3>Treino</h3>
+      <div class="linha-botoes">
+        <button class="btn primario" id="m-run">▶ Treinar</button>
+        <button class="btn" id="m-reset">Reiniciar pesos</button>
+      </div>
+      <h3>Risco empírico por época</h3>
+      <canvas id="c3loss" width="300" height="110" aria-label="Curva do risco empírico ao longo das épocas"></canvas>
+      <div class="log" id="m-log">Cada quadro executa alguns passos de gradiente sobre o risco empírico R̂(W) = média da entropia cruzada nas 240 amostras.</div>
+      <div class="aviso" id="m-aviso"><b>Rede de degraus:</b> a derivada é 0 em toda parte ⇒ o backward devolve gradiente nulo ⇒ <em>nenhum peso se move</em>. O erro fica num platô — foi isso que paralisou a área até a virada diferenciável.</div>
+    </aside>
+  </div>
+  <div class="observar">
+    <h3>Para conduzir em aula</h3>
+    <ul>
+      <li>Losango é a fronteira construída “à mão” no slide — aqui a rede a <em>descobre</em> sozinha, só com as amostras. Compare os dois caminhos.</li>
+      <li>Suba η até estourar (perda oscila/diverge) e desça até quase parar: a próxima aula é exatamente sobre esse dial.</li>
+      <li>Troque para <b>degrau ⚠</b> e treine: a curva de R̂ vira uma linha reta. Volte para tanh e assista o gradiente “destravar” o aprendizado.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Material de apoio da Aula 3 (Aprendendo a rede — Parte 1), adaptada da Lecture 3 do 11-785/CMU.
+  Atalhos: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> trocam de experimento · <kbd>espaço</kbd> inicia/pausa o experimento visível.
+  Tudo roda localmente — nenhum dado sai do navegador.
+</footer>
+
+<script>
+"use strict";
+/* ================= util ================= */
+const $ = id => document.getElementById(id);
+const fmt = (x,d=2) => x.toLocaleString('pt-BR',{minimumFractionDigits:d, maximumFractionDigits:d});
+function mulberry(seed){ let s=seed>>>0; return function(){ s|=0; s=(s+0x6D2B79F5)|0; let t=Math.imul(s^(s>>>15),1|s); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
+function setupCanvas(cv){ // nitidez em telas hiDPI mantendo coordenadas lógicas
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  const W = cv.width, H = cv.height;
+  cv.width = W*dpr; cv.height = H*dpr;
+  cv.style.aspectRatio = W+" / "+H;
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr,dpr);
+  return {ctx, W, H};
+}
+const COR = {azul:'#16357C', azulClaro:'#3F6DC4', ciano:'#0D8A99', magenta:'#D12E6E',
+             dourado:'#E9A100', carmim:'#B3121B', verde:'#1E8E5A', cinza:'#55607A', linha:'#E3E8F4'};
+
+/* ================= abas ================= */
+const tabs = [ $('tab1'), $('tab2'), $('tab3') ];
+const demos = [ $('demo1'), $('demo2'), $('demo3') ];
+let demoAtiva = 0;
+function trocaDemo(i){
+  demoAtiva = i;
+  tabs.forEach((t,j)=>t.setAttribute('aria-selected', j===i ? 'true' : 'false'));
+  demos.forEach((d,j)=>d.classList.toggle('ativa', j===i));
+}
+tabs.forEach((t,i)=>t.addEventListener('click', ()=>trocaDemo(i)));
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT') return;
+  if(e.key>='1' && e.key<='3') trocaDemo(+e.key-1);
+  if(e.key===' '){ e.preventDefault(); [togglePerceptron, null, toggleTreino][demoAtiva]?.(); }
+});
+
+/* ============================================================
+   DEMO 1 — Perceptron de Rosenblatt
+============================================================ */
+let togglePerceptron;
+(function(){
+  const {ctx, W, H} = setupCanvas($('c1'));
+  const pad = 34;
+  const X2C = x => pad + (x+1)/2*(W-2*pad);       // dados em [-1,1]²
+  const Y2C = y => H-pad - (y+1)/2*(H-2*pad);
+  const C2X = cx => (cx-pad)/(W-2*pad)*2 - 1;
+  const C2Y = cy => ((H-pad-cy)/(H-2*pad))*2 - 1;
+
+  let pts = [];                 // {x,y,c} c ∈ {-1,+1}
+  let w = [0,0,0];              // [w1,w2,b]
+  let upd = 0, cursor = 0, convergiu = false, rodando = false;
+  let classePincel = +1, ultimoTocado = -1;
+  let rng = mulberry(11);
+  const gauss = ()=> (rng()+rng()+rng()-1.5)*1.155;
+
+  function blobs(sd){
+    pts = [];
+    for(let i=0;i<26;i++) pts.push({x:-0.48+gauss()*sd, y:-0.34+gauss()*sd, c:-1});
+    for(let i=0;i<26;i++) pts.push({x: 0.50+gauss()*sd, y: 0.38+gauss()*sd, c:+1});
+    clampa();
+  }
+  function blobsMisturados(){
+    pts = [];
+    for(let i=0;i<26;i++) pts.push({x:-0.22+gauss()*0.34, y:-0.15+gauss()*0.34, c:-1});
+    for(let i=0;i<26;i++) pts.push({x: 0.22+gauss()*0.34, y: 0.16+gauss()*0.34, c:+1});
+    clampa();
+  }
+  function clampa(){ pts.forEach(p=>{p.x=Math.max(-0.98,Math.min(0.98,p.x)); p.y=Math.max(-0.98,Math.min(0.98,p.y));}); }
+  function resetW(msg){
+    w = [rng()*1.6-0.8, rng()*1.6-0.8, rng()*0.6-0.3];
+    if(pts.length && nErros()===0){ w[0]=-w[0]; w[1]=-w[1]; w[2]=-w[2]; }  // começa errando: há o que aprender
+    upd = 0; cursor = 0; convergiu = false; ultimoTocado = -1;
+    if(msg) log(msg);
+    para(); atualiza();
+  }
+  const mal = p => p.c*(w[0]*p.x + w[1]*p.y + w[2]) <= 0;
+  const nErros = () => pts.reduce((s,p)=>s+(mal(p)?1:0),0);
+
+  function umPasso(){
+    if(!pts.length || convergiu) return false;
+    for(let k=0;k<pts.length;k++){
+      const i=(cursor+k)%pts.length, p=pts[i];
+      if(mal(p)){
+        w[0]+=p.c*p.x; w[1]+=p.c*p.y; w[2]+=p.c;
+        upd++; cursor=(i+1)%pts.length; ultimoTocado=i;
+        log(`ponto (${fmt(p.x)}, ${fmt(p.y)}) classe ${p.c>0?'+1':'−1'} mal classificado → <b>w ← w ${p.c>0?'+':'−'} x̃</b>`);
+        if(nErros()===0){ convergiu=true; para(); log(`<b>Convergiu</b> após ${upd} atualizações — separador perfeito encontrado.`);}
+        return true;
+      }
+    }
+    convergiu = true; para();
+    log(`<b>Convergiu</b> após ${upd} atualizações — separador perfeito encontrado.`);
+    return false;
+  }
+  function umaEpoca(){ for(let k=0;k<pts.length;k++) if(!umPasso()) break; atualiza(); }
+
+  let raf=null, acc=0, tPrev=0;
+  function passoRodando(t){
+    if(!rodando) return;
+    if(!tPrev) tPrev=t;
+    acc += (t-tPrev); tPrev=t;
+    while(acc>110){ acc-=110; umPasso(); if(convergiu) break; }
+    atualiza();
+    if(rodando) raf=requestAnimationFrame(passoRodando);
+  }
+  function roda(){ if(convergiu||!pts.length) return; rodando=true; tPrev=0; acc=0;
+    $('p-run').textContent='❚❚ Pausar'; raf=requestAnimationFrame(passoRodando); atualiza(); }
+  function para(){ rodando=false; if(raf) cancelAnimationFrame(raf); $('p-run').textContent='▶ Rodar'; }
+  togglePerceptron = ()=> rodando ? (para(),atualiza()) : roda();
+
+  function log(html){ $('p-log').innerHTML = html; }
+
+  function desenha(){
+    ctx.clearRect(0,0,W,H);
+    // meia-plano da classe +1 (sombreado)
+    if(w[0]||w[1]){
+      ctx.save(); ctx.beginPath();
+      const cs=[]; // interseções da reta com as bordas lógicas
+      const cand=[];
+      if(Math.abs(w[1])>1e-9){ cand.push([-1,(-w[2]+w[0])/w[1]]); cand.push([1,(-w[2]-w[0])/w[1]]); }
+      if(Math.abs(w[0])>1e-9){ cand.push([(-w[2]+w[1])/w[0],-1]); cand.push([(-w[2]-w[1])/w[0],1]); }
+      for(const [x,y] of cand) if(x>=-1.001&&x<=1.001&&y>=-1.001&&y<=1.001) cs.push([x,y]);
+      if(cs.length>=2){
+        // polígono: cantos do quadrado no lado positivo + as duas interseções
+        const cantos=[[-1,-1],[1,-1],[1,1],[-1,1]].filter(([x,y])=>w[0]*x+w[1]*y+w[2]>0);
+        const poly=[...cantos, cs[0], cs[1]];
+        const cx0=poly.reduce((s,p)=>s+p[0],0)/poly.length, cy0=poly.reduce((s,p)=>s+p[1],0)/poly.length;
+        poly.sort((a,b)=>Math.atan2(a[1]-cy0,a[0]-cx0)-Math.atan2(b[1]-cy0,b[0]-cx0));
+        ctx.fillStyle='rgba(209,46,110,0.07)';
+        ctx.beginPath(); poly.forEach(([x,y],i)=> i?ctx.lineTo(X2C(x),Y2C(y)):ctx.moveTo(X2C(x),Y2C(y)));
+        ctx.closePath(); ctx.fill();
+        // reta
+        ctx.strokeStyle=COR.azul; ctx.lineWidth=2.5;
+        ctx.beginPath(); ctx.moveTo(X2C(cs[0][0]),Y2C(cs[0][1])); ctx.lineTo(X2C(cs[1][0]),Y2C(cs[1][1])); ctx.stroke();
+        // vetor normal w a partir do meio da reta
+        const mx=(cs[0][0]+cs[1][0])/2, my=(cs[0][1]+cs[1][1])/2;
+        const n=Math.hypot(w[0],w[1]), ux=w[0]/n*0.28, uy=w[1]/n*0.28;
+        seta(X2C(mx),Y2C(my),X2C(mx+ux),Y2C(my+uy),COR.ciano,3);
+        ctx.fillStyle=COR.ciano; ctx.font='bold 15px "Fira Mono",monospace';
+        ctx.fillText('w', X2C(mx+ux)+8, Y2C(my+uy)-4);
+      }
+      ctx.restore();
+    }
+    // eixos
+    ctx.strokeStyle=COR.linha; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(X2C(-1),Y2C(0)); ctx.lineTo(X2C(1),Y2C(0));
+    ctx.moveTo(X2C(0),Y2C(-1)); ctx.lineTo(X2C(0),Y2C(1)); ctx.stroke();
+    // pontos
+    for(let i=0;i<pts.length;i++){
+      const p=pts[i], cx=X2C(p.x), cy=Y2C(p.y);
+      ctx.beginPath(); ctx.arc(cx,cy,6,0,7);
+      ctx.fillStyle = p.c>0?COR.magenta:COR.azulClaro; ctx.fill();
+      if(mal(p)){ ctx.strokeStyle=COR.carmim; ctx.lineWidth=2.5;
+        ctx.beginPath(); ctx.arc(cx,cy,10,0,7); ctx.stroke(); }
+      if(i===ultimoTocado){ ctx.strokeStyle=COR.dourado; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.arc(cx,cy,13,0,7); ctx.stroke(); }
+    }
+  }
+  function seta(x1,y1,x2,y2,cor,lw){
+    ctx.save(); ctx.strokeStyle=cor; ctx.fillStyle=cor; ctx.lineWidth=lw;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    const a=Math.atan2(y2-y1,x2-x1);
+    ctx.beginPath(); ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-11*Math.cos(a-0.42), y2-11*Math.sin(a-0.42));
+    ctx.lineTo(x2-11*Math.cos(a+0.42), y2-11*Math.sin(a+0.42));
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function atualiza(){
+    desenha();
+    const e = pts.length ? nErros() : 0;
+    $('p-upd').textContent = upd;
+    $('p-err').textContent = pts.length ? e : '—';
+    $('p-w').textContent = `(${fmt(w[0])}, ${fmt(w[1])}, ${fmt(w[2])})`;
+    const b=$('p-badge');
+    if(convergiu){ b.textContent='convergiu ✓'; b.className='badge ok'; }
+    else if(rodando){ b.textContent='rodando…'; b.className='badge rodando'; }
+    else { b.textContent = e>0 ? 'há erros' : 'parado'; b.className='badge'+(e>0?' no':''); }
+  }
+
+  $('c1').addEventListener('pointerdown', ev=>{
+    const r=ev.currentTarget.getBoundingClientRect();
+    const x=C2X((ev.clientX-r.left)/r.width*W), y=C2Y((ev.clientY-r.top)/r.height*H);
+    if(x<-1||x>1||y<-1||y>1) return;
+    pts.push({x,y,c:classePincel}); convergiu=false; atualiza();
+  });
+  $('p-cls-pos').addEventListener('click',()=>{classePincel=+1;$('p-cls-pos').classList.add('ligado');$('p-cls-neg').classList.remove('ligado');});
+  $('p-cls-neg').addEventListener('click',()=>{classePincel=-1;$('p-cls-neg').classList.add('ligado');$('p-cls-pos').classList.remove('ligado');});
+  $('p-sep').addEventListener('click', ()=>{ blobs(0.16); $('p-aviso').classList.remove('mostra'); resetW('Dados separáveis: existe reta perfeita — a regra <b>vai</b> convergir.'); });
+  $('p-nsep').addEventListener('click', ()=>{ blobsMisturados(); $('p-aviso').classList.add('mostra'); resetW('Dados com sobreposição: nenhuma reta é perfeita.'); });
+  $('p-clr').addEventListener('click', ()=>{ pts=[]; resetW('Plano limpo — clique para adicionar pontos.'); });
+  $('p-passo').addEventListener('click', ()=>{ para(); umPasso(); atualiza(); });
+  $('p-epoca').addEventListener('click', ()=>{ para(); umaEpoca(); });
+  $('p-run').addEventListener('click', ()=>togglePerceptron());
+  $('p-reset').addEventListener('click', ()=>resetW('Pesos reiniciados.'));
+
+  blobs(0.16); resetW();
+})();
+
+/* ============================================================
+   DEMO 2 — Degrau × Sigmoide
+============================================================ */
+(function(){
+  const {ctx, W, H} = setupCanvas($('c2'));
+  const rngBox = { r: mulberry(3) };
+  let dados = [];         // {x, y∈{0,1}}
+  let b = 0.55, k = 6, ov = 0.15;
+  let anim = null;
+
+  function geraDados(){
+    const r=rngBox.r, g=()=> (r()+r()+r()-1.5)*1.155;
+    dados=[];
+    const mu0=-0.62+ov, mu1=0.62-ov, sd=0.20;
+    for(let i=0;i<20;i++) dados.push({x:Math.max(-1.15,Math.min(1.15,mu0+g()*sd)), y:0});
+    for(let i=0;i<20;i++) dados.push({x:Math.max(-1.15,Math.min(1.15,mu1+g()*sd)), y:1});
+  }
+  const sig = z => 1/(1+Math.exp(-z));
+  const erro01 = bb => dados.reduce((s,d)=> s + (((d.x>bb)?1:0)!==d.y ? 1 : 0), 0)/dados.length;
+  function bce(bb){
+    let s=0; for(const d of dados){ const p=sig(k*(d.x-bb));
+      s += -(d.y*Math.log(p+1e-9)+(1-d.y)*Math.log(1-p+1e-9)); }
+    return s/dados.length;
+  }
+  function dbce(bb){ // dL/db = média de −k(p−y)
+    let s=0; for(const d of dados){ const p=sig(k*(d.x-bb)); s += -k*(p-d.y); }
+    return s/dados.length;
+  }
+
+  // geometria dos três painéis
+  const P1={x:60,y:26, w:W-100, h:190};                 // dados + sigmoide
+  const P2={x:60,y:P1.y+P1.h+66, w:(W-160)/2, h:270};   // escada 0/1
+  const P3={x:P2.x+P2.w+60, y:P2.y, w:P2.w, h:270};     // perda contínua
+
+  function eixo(P, titulo, cor){
+    ctx.strokeStyle=COR.linha; ctx.lineWidth=1;
+    ctx.strokeRect(P.x,P.y,P.w,P.h);
+    ctx.fillStyle=cor; ctx.font='bold 14px "Fira Sans",sans-serif';
+    ctx.fillText(titulo, P.x, P.y-8);
+  }
+  const bx = (P,bb)=> P.x + (bb+1.2)/2.4*P.w;
+
+  function desenha(){
+    ctx.clearRect(0,0,W,H);
+    // ---- painel 1: dados 1D + sigmoide + limiar
+    eixo(P1,'Dados (y ∈ {0,1}) e o modelo p = σ(k·(x − b))', COR.cinza);
+    const y0=P1.y+P1.h-30, y1=P1.y+30;
+    ctx.strokeStyle=COR.linha; ctx.beginPath();
+    ctx.moveTo(P1.x,y0); ctx.lineTo(P1.x+P1.w,y0);
+    ctx.moveTo(P1.x,y1); ctx.lineTo(P1.x+P1.w,y1); ctx.stroke();
+    ctx.fillStyle=COR.cinza; ctx.font='12px "Fira Mono",monospace';
+    ctx.fillText('y=0', P1.x-38+8, y0+4); ctx.fillText('y=1', P1.x-38+8, y1+4);
+    // sigmoide
+    ctx.strokeStyle=COR.magenta; ctx.lineWidth=2.5; ctx.beginPath();
+    for(let i=0;i<=200;i++){ const x=-1.2+2.4*i/200, p=sig(k*(x-b));
+      const cx=bx(P1,x), cy=y0+(y1-y0)*p; i?ctx.lineTo(cx,cy):ctx.moveTo(cx,cy); }
+    ctx.stroke();
+    // limiar
+    ctx.strokeStyle=COR.dourado; ctx.lineWidth=2.5; ctx.setLineDash([6,5]);
+    ctx.beginPath(); ctx.moveTo(bx(P1,b),P1.y+6); ctx.lineTo(bx(P1,b),P1.y+P1.h-6); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=COR.dourado; ctx.font='bold 13px "Fira Mono",monospace';
+    ctx.fillText('b', bx(P1,b)+6, P1.y+18);
+    // pontos (errados: anel carmim)
+    for(const d of dados){
+      const cy = d.y? y1 : y0, cx = bx(P1,d.x);
+      ctx.beginPath(); ctx.arc(cx,cy,5.5,0,7);
+      ctx.fillStyle = d.y?COR.magenta:COR.azulClaro; ctx.fill();
+      if(((d.x>b)?1:0)!==d.y){ ctx.strokeStyle=COR.carmim; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(cx,cy,9,0,7); ctx.stroke(); }
+    }
+    // ---- painéis 2 e 3: perdas em função de b
+    curva(P2, erro01, COR.carmim, 'Erro 0/1(b) — a escada sem derivada', false);
+    curva(P3, bce,    COR.magenta,'Perda contínua(b) — entropia cruzada', true);
+  }
+  function curva(P, f, cor, titulo, tangente){
+    eixo(P, titulo, cor);
+    // amostrar
+    const n=260, ys=[];
+    let ymax=-1e9, ymin=1e9;
+    for(let i=0;i<=n;i++){ const v=f(-1.2+2.4*i/n); ys.push(v); if(v>ymax)ymax=v; if(v<ymin)ymin=v; }
+    if(ymax-ymin<1e-6) ymax=ymin+1;
+    const Y=v=> P.y+P.h-14 - (v-ymin)/(ymax-ymin)*(P.h-34);
+    ctx.strokeStyle=cor; ctx.lineWidth=2.5; ctx.beginPath();
+    for(let i=0;i<=n;i++){ const cx=P.x+P.w*i/n, cy=Y(ys[i]); i?ctx.lineTo(cx,cy):ctx.moveTo(cx,cy); }
+    ctx.stroke();
+    // marcador em b
+    const vb=f(b), mx=bx(P,b), my=Y(vb);
+    ctx.beginPath(); ctx.arc(mx,my,7,0,7); ctx.fillStyle=COR.dourado; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    if(tangente){ // seta do gradiente: aponta a direção de DESCIDA (−dL/db)
+      const g=dbce(b), passo=Math.max(-0.5,Math.min(0.5,-g*0.35));
+      const x2=bx(P,b+passo), y2=Y(f(Math.max(-1.2,Math.min(1.2,b+passo))));
+      ctx.save(); ctx.strokeStyle=COR.verde; ctx.fillStyle=COR.verde; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(mx,my); ctx.lineTo(x2,y2); ctx.stroke();
+      const a=Math.atan2(y2-my,x2-mx);
+      ctx.beginPath(); ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-10*Math.cos(a-0.45),y2-10*Math.sin(a-0.45));
+      ctx.lineTo(x2-10*Math.cos(a+0.45),y2-10*Math.sin(a+0.45));
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+  }
+  function atualiza(){
+    desenha();
+    $('g-b').textContent = fmt(b); $('g-b-out').textContent = fmt(b);
+    $('g-e01').textContent = fmt(100*erro01(b),1)+'%';
+    $('g-bce').textContent = fmt(bce(b),3);
+    $('g-grad').textContent = fmt(dbce(b),3);
+    $('g-b-sl').value = b;
+  }
+  function desceContinua(){
+    cancelAnimationFrame(anim); $('g-aviso').classList.remove('mostra');
+    $('g-log').innerHTML='Descendo: <b>b ← b − η·dL/db</b> com η = 0,08 por quadro…';
+    const passo = ()=>{
+      const g=dbce(b);
+      b = Math.max(-1,Math.min(1, b - 0.08*g));
+      atualiza();
+      if(Math.abs(g)>0.004) anim=requestAnimationFrame(passo);
+      else $('g-log').innerHTML=`<b>Mínimo alcançado</b> em b = ${fmt(b)} — o gradiente indicou a direção o caminho todo.`;
+    };
+    anim=requestAnimationFrame(passo);
+  }
+  function desce01(){
+    cancelAnimationFrame(anim);
+    $('g-aviso').classList.add('mostra');
+    $('g-log').innerHTML='b ← b − η·<b>d(erro 0/1)/db</b> … mas a derivada é <b>0</b>: b não sai do lugar.';
+    // pequena vibração didática do marcador, sem deslocamento líquido
+    const b0=b; let t=0;
+    const wiggle=()=>{ t++; b=b0+Math.sin(t*0.9)*0.004; atualiza();
+      if(t<26) anim=requestAnimationFrame(wiggle); else { b=b0; atualiza(); } };
+    anim=requestAnimationFrame(wiggle);
+  }
+  $('g-b-sl').addEventListener('input', e=>{ b=+e.target.value; atualiza(); });
+  $('g-k-sl').addEventListener('input', e=>{ k=+e.target.value; $('g-k-out').textContent=fmt(k,1); atualiza(); });
+  $('g-ov-sl').addEventListener('input', e=>{ ov=+e.target.value; $('g-ov-out').textContent=fmt(ov); geraDados(); atualiza(); });
+  $('g-desceC').addEventListener('click', desceContinua);
+  $('g-desce01').addEventListener('click', desce01);
+  $('g-novo').addEventListener('click', ()=>{ geraDados(); atualiza(); });
+
+  geraDados(); atualiza();
+})();
+
+/* ============================================================
+   DEMO 3 — ERM ao vivo (MLP + backprop)
+============================================================ */
+let toggleTreino;
+(function(){
+  const {ctx, W, H} = setupCanvas($('c3'));
+  const lossCv = setupCanvas($('c3loss'));
+  const pad=8;
+  const X2C = x => pad + (x+1)/2*(W-2*pad);
+  const Y2C = y => H-pad - (y+1)/2*(H-2*pad);
+
+  /* ---- rede ---- */
+  const ACT = {
+    tanh:    {f:z=>Math.tanh(z),        d:(z,a)=>1-a*a},
+    relu:    {f:z=>z>0?z:0,             d:(z,a)=>z>0?1:0},
+    sigmoid: {f:z=>1/(1+Math.exp(-z)),  d:(z,a)=>a*(1-a)},
+    degrau:  {f:z=>z>0?1:0,             d:(z,a)=>0},
+  };
+  const sizes=[2,12,12,1];
+  let net=null, ato='tanh', ds='losango', lr=0.8;
+  let X=[], Y=[], epoca=0, hist=[], rodando=false, raf=null;
+  let seedNet=1;
+
+  function makeNet(){
+    const r=mulberry(1000+seedNet*7), g=()=> (r()+r()+r()+r()-2)*0.866*2;
+    net={W:[],b:[]};
+    for(let l=1;l<sizes.length;l++){
+      const nin=sizes[l-1], nout=sizes[l];
+      const sc = ato==='relu' ? Math.sqrt(2/nin) : Math.sqrt(1.2/nin);
+      const Wl=[]; for(let i=0;i<nout;i++){const row=[];for(let j=0;j<nin;j++)row.push(g()*sc);Wl.push(row);}
+      net.W.push(Wl); net.b.push(new Array(nout).fill(0));
+    }
+    epoca=0; hist=[];
+  }
+  function forward(x){
+    const zs=[], as=[x]; let a=x; const L=net.W.length;
+    for(let l=0;l<L;l++){
+      const Wl=net.W[l], bl=net.b[l], z=[];
+      for(let i=0;i<Wl.length;i++){ let s=bl[i]; const Wi=Wl[i];
+        for(let j=0;j<Wi.length;j++) s+=Wi[j]*a[j]; z.push(s); }
+      zs.push(z);
+      const g = (l===L-1) ? (ato==='degrau'?ACT.degrau:ACT.sigmoid) : ACT[ato];
+      a=z.map(g.f); as.push(a);
+    }
+    return {zs,as,p:a[0]};
+  }
+  function passoTreino(){
+    const L=net.W.length, N=X.length, eps=1e-9;
+    let loss=0, ok=0;
+    if(ato==='degrau'){ // rede toda de degraus: gradiente nulo em toda parte
+      for(let n=0;n<N;n++){ const p=forward(X[n]).p;
+        if(p===Y[n]) ok++; loss += p===Y[n]?0:1; }
+      epoca++; return {loss:loss/N, acc:ok/N};   // nada é atualizado
+    }
+    const gW=net.W.map(Wl=>Wl.map(r=>r.map(()=>0)));
+    const gb=net.b.map(bl=>bl.map(()=>0));
+    for(let n=0;n<N;n++){
+      const {zs,as,p}=forward(X[n]); const y=Y[n];
+      loss += -(y*Math.log(p+eps)+(1-y)*Math.log(1-p+eps));
+      if((p>0.5?1:0)===y) ok++;
+      let delta=[p-y];
+      for(let l=L-1;l>=0;l--){
+        const aPrev=as[l];
+        for(let i=0;i<net.W[l].length;i++){
+          gb[l][i]+=delta[i]; const Wi=net.W[l][i], gWi=gW[l][i];
+          for(let j=0;j<Wi.length;j++) gWi[j]+=delta[i]*aPrev[j];
+        }
+        if(l>0){
+          const g=ACT[ato], nd=new Array(net.W[l-1].length).fill(0);
+          for(let j=0;j<nd.length;j++){ let s=0;
+            for(let i=0;i<net.W[l].length;i++) s+=net.W[l][i][j]*delta[i];
+            nd[j]=s*g.d(zs[l-1][j], as[l][j]); }
+          delta=nd;
+        }
+      }
+    }
+    for(let l=0;l<L;l++)
+      for(let i=0;i<net.W[l].length;i++){
+        net.b[l][i]-=lr*gb[l][i]/N;
+        for(let j=0;j<net.W[l][i].length;j++) net.W[l][i][j]-=lr*gW[l][i][j]/N;
+      }
+    epoca++;
+    return {loss:loss/N, acc:ok/N};
+  }
+
+  /* ---- dados ---- */
+  function geraDados(){
+    const r=mulberry(77), R=()=>r()*2-1;
+    X=[]; Y=[];
+    if(ds==='losango'){ for(let i=0;i<240;i++){ const x=R(),y=R(); X.push([x,y]); Y.push(Math.abs(x)+Math.abs(y)<0.72?1:0);} }
+    else if(ds==='xor'){ for(let i=0;i<240;i++){ const cx=r()<0.5?-0.5:0.5, cy=r()<0.5?-0.5:0.5;
+      X.push([cx+R()*0.28, cy+R()*0.28]); Y.push((cx>0)===(cy>0)?1:0);} }
+    else if(ds==='circulo'){ for(let i=0;i<240;i++){ const x=R(),y=R(); X.push([x,y]); Y.push(x*x+y*y<0.3?1:0);} }
+    else { for(let i=0;i<240;i++){ const t=r()*Math.PI, c=i%2;
+      const x=c?Math.cos(t)*0.6-0.3:Math.cos(t)*0.6+0.3;
+      const y=c?Math.sin(t)*0.6-0.18:-Math.sin(t)*0.6+0.18;
+      X.push([x+R()*0.07, y+R()*0.07]); Y.push(c);} }
+  }
+
+  /* ---- desenho ---- */
+  const GX=64, GY=46;
+  function corProb(p){ // azul (0) → branco (0.5) → magenta (1)
+    let r,g2,b2;
+    if(p<0.5){ const t=p/0.5; r=63+(255-63)*t; g2=109+(255-109)*t; b2=196+(255-196)*t; }
+    else { const t=(p-0.5)/0.5; r=255+(209-255)*t; g2=255+(46-255)*t; b2=255+(110-255)*t; }
+    return `rgba(${r|0},${g2|0},${b2|0},0.55)`;
+  }
+  function desenha(){
+    ctx.clearRect(0,0,W,H);
+    const cw=(W-2*pad)/GX, ch=(H-2*pad)/GY;
+    for(let i=0;i<GX;i++) for(let j=0;j<GY;j++){
+      const x=-1+(i+0.5)*2/GX, y=-1+(j+0.5)*2/GY;
+      const p=forward([x,y]).p;
+      ctx.fillStyle=corProb(p);
+      ctx.fillRect(pad+i*cw, H-pad-(j+1)*ch, cw+0.6, ch+0.6);
+    }
+    for(let n=0;n<X.length;n++){
+      const cx=X2C(X[n][0]), cy=Y2C(X[n][1]);
+      ctx.beginPath(); ctx.arc(cx,cy,4.4,0,7);
+      ctx.fillStyle = Y[n]?COR.magenta:COR.azulClaro; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.2; ctx.stroke();
+    }
+  }
+  function desenhaLoss(){
+    const {ctx:c, W:w2, H:h2}=lossCv;
+    c.clearRect(0,0,w2,h2);
+    c.strokeStyle=COR.linha; c.strokeRect(0.5,0.5,w2-1,h2-1);
+    if(hist.length<2) return;
+    const vs=hist.map(h=>Math.max(h,1e-4));
+    const lmax=Math.log10(Math.max(...vs)), lmin=Math.log10(Math.min(...vs));
+    const span=Math.max(lmax-lmin,0.2);
+    c.strokeStyle=COR.magenta; c.lineWidth=2; c.beginPath();
+    for(let i=0;i<vs.length;i++){
+      const x=6+(w2-12)*i/(vs.length-1);
+      const y=h2-8-(h2-16)*((Math.log10(vs[i])-lmin)/span);
+      i?c.lineTo(x,y):c.moveTo(x,y);
+    }
+    c.stroke();
+    c.fillStyle=COR.cinza; c.font='10px "Fira Mono",monospace';
+    c.fillText('log R̂', 8, 14);
+  }
+
+  /* ---- laço ---- */
+  let ultimo={loss:NaN, acc:0};
+  function quadro(){
+    if(!rodando) return;
+    const passos = ato==='degrau' ? 1 : 6;
+    for(let s=0;s<passos;s++) ultimo=passoTreino();
+    hist.push(ultimo.loss); if(hist.length>420) hist=hist.filter((_,i)=>i%2===0);
+    desenha(); desenhaLoss(); hudAtualiza();
+    raf=requestAnimationFrame(quadro);
+  }
+  function treina(){ rodando=true; $('m-run').textContent='❚❚ Pausar'; hudAtualiza(); raf=requestAnimationFrame(quadro); }
+  function pausa(){ rodando=false; if(raf) cancelAnimationFrame(raf); $('m-run').textContent='▶ Treinar'; hudAtualiza(); }
+  toggleTreino = ()=> rodando?pausa():treina();
+
+  function hudAtualiza(){
+    $('m-ep').textContent=epoca;
+    $('m-loss').textContent=isNaN(ultimo.loss)?'—':fmt(ultimo.loss,3)+(ato==='degrau'?' (erro 0/1)':'');
+    $('m-acc').textContent=(ultimo.acc?fmt(100*ultimo.acc,1):'—')+'%';
+    $('m-prog').style.width=(100*(ultimo.acc||0))+'%';
+    const bd=$('m-badge');
+    if(rodando){ bd.textContent = ato==='degrau'?'congelado ⚠':'treinando…';
+      bd.className='badge '+(ato==='degrau'?'no':'rodando'); }
+    else { bd.textContent='parado'; bd.className='badge'; }
+  }
+  function reinicia(){
+    pausa(); seedNet++; makeNet();
+    ultimo={loss:NaN,acc:0};
+    desenha(); desenhaLoss(); hudAtualiza();
+    $('m-log').innerHTML = ato==='degrau'
+      ? 'Pesos novos — mas com <b>degrau</b> nenhum gradiente flui: nada vai se mover.'
+      : `Pesos reiniciados. η = ${fmt(lr)} · ativação = ${ato}. O laço: forward → R̂ → backward → passo.`;
+  }
+
+  document.querySelectorAll('[data-ds]').forEach(btn=>btn.addEventListener('click', ()=>{
+    document.querySelectorAll('[data-ds]').forEach(b=>b.classList.remove('ligado'));
+    btn.classList.add('ligado'); ds=btn.dataset.ds; geraDados(); reinicia();
+  }));
+  document.querySelectorAll('[data-act]').forEach(btn=>btn.addEventListener('click', ()=>{
+    document.querySelectorAll('[data-act]').forEach(b=>b.classList.remove('ligado'));
+    btn.classList.add('ligado'); ato=btn.dataset.act;
+    $('m-aviso').classList.toggle('mostra', ato==='degrau');
+    reinicia();
+  }));
+  $('m-lr').addEventListener('input', e=>{ lr=Math.pow(10,+e.target.value); $('m-lr-out').textContent=fmt(lr,2); });
+  $('m-run').addEventListener('click', ()=>toggleTreino());
+  $('m-reset').addEventListener('click', reinicia);
+
+  geraDados(); makeNet(); desenha(); desenhaLoss(); hudAtualiza();
+})();
+</script>
+</body>
+</html>

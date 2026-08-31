@@ -1,0 +1,105 @@
+%% ============================================================
+%% AULA 6 — A rede que decora: sobreajuste, regularização e
+%%          generalização
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Esqueleto com esboço de conteúdo — a desenvolver.
+%% Ementa (ficha SEI 5116656): item 2 — projeto de redes (topologia,
+%% parâmetros).
+%%
+%% Compilar:  latexmk -xelatex aula06.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 6 — Generalização]{Aula 6: A rede que decora — sobreajuste, regularização e generalização}
+\subtitle[GBC073 — Inteligência Computacional]{Viés e variância \textbullet\ validação \textbullet\ dropout \textbullet\ weight decay}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ------------------------------------------------------------ roteiro
+\begin{frame}{Roteiro da aula}
+  \begin{itemize}\setlength{\itemsep}{0.5ex}
+    \item<1-> \textbf{O sobreajuste e o dilema viés-variância}
+    \item<2-> \textbf{Validação, early stopping e conjunto de teste}
+    \item<3-> \textbf{Regularização explícita:} weight decay e dropout
+    \item<4-> \textbf{Normalização e aumento de dados}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{O sobreajuste e o dilema viés-variância}
+
+\begin{frame}{O sobreajuste e o dilema viés-variância}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Sobreajuste (\emph{overfitting}): decorar o conjunto de treino e
+          falhar no que não viu.
+    \item Erro de generalização = viés (modelo simples demais) + variância
+          (modelo sensível demais ao sorteio dos dados) + ruído.
+    \item Redes grandes têm variância alta — daí a fama de ``decorar''.
+    \item Mas redes grandes \emph{com} regularização costumam generalizar
+          melhor (contra-intuição importante).
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Validação, early stopping e conjunto de teste}
+
+\begin{frame}{Validação, early stopping e conjunto de teste}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Três partições: treino (ajusta), validação (decide), teste (relata
+          — só uma vez).
+    \item \emph{Early stopping}: parar quando o erro de validação para de cair.
+    \item Escolher hiperparâmetros pelo teste vaza o teste — vício sutil.
+    \item Curvas de aprendizado como ferramenta de diagnóstico.
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Regularização explícita}
+
+\begin{frame}{Regularização explícita (weight decay, dropout)}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Weight decay ($L_2$ nos pesos): penaliza pesos grandes, encolhe para
+          soluções simples.
+    \item Dropout: sorteia neurônios desligados a cada passo — a rede aprende a
+          ser redundante.
+    \item Dropout como \emph{ensemble} barato: média implícita de muitas redes.
+    \item Em teste, nada é desligado (ou se re-escala a ativação).
+  \end{itemize}
+  \begin{ideiabox}
+    Regularizar não é castigar a rede — é impedir que ela memorize o que não
+    deveria existir como regra.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\section{Normalização e aumento de dados}
+
+\begin{frame}{Normalização e aumento de dados}
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item Normalização de lote (\emph{batch norm}): estabiliza a distribuição
+          das ativações — treina mais rápido e regulariza de brinde.
+    \item Aumento de dados (\emph{data augmentation}): fabricar exemplos
+          plausíveis (rotações, ruído, recortes).
+    \item A regularização mais barata costuma ser mais dados — reais ou
+          sintéticos.
+  \end{itemize}
+\end{frame}
+
+\end{document}

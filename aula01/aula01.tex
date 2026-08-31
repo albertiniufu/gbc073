@@ -1,0 +1,868 @@
+%% ============================================================
+%% AULA 1 — Introdução: redes neurais como aproximadores universais
+%% GBC073 — Inteligência Computacional (FACOM/UFU)
+%%
+%% Espinha dorsal: CMU 11-785 (S26), Lecture 1 — traduzida e
+%% adaptada: conexionismo, perceptron, portas lógicas, geometria
+%% da separabilidade, XOR, universalidade e o papel da
+%% profundidade. PyTorch desde o primeiro dia.
+%%
+%% Compilar:  latexmk -xelatex aula01.tex   (duas passadas!)
+%% ============================================================
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+\makeatletter
+\def\input@path{{./}{../}}
+\makeatother
+
+\usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
+\usepackage{babel}
+\babelprovide[import, main]{brazilian}
+
+\title[Aula 1 — Introdução]{Aula 1: Introdução — redes neurais como aproximadores universais}
+\subtitle[GBC073 — Inteligência Computacional]{Conexionismo \textbullet\ Perceptron \textbullet\ Universalidade \textbullet\ O papel da profundidade}
+\author[Prof.\ Marcelo Albertini]{Prof.\ Marcelo Keese Albertini}
+\institute{GBC073 — Inteligência Computacional \textbullet\ Universidade Federal de Uberlândia}
+\date{2026}
+
+% foto de fonte aberta com fallback:
+% \fotoslot{arquivo}{largura-max}{altura-max}{legenda}{crédito}
+% se imagens/arquivo não existir, desenha um placeholder e o PDF compila igual.
+\newcommand{\fotoslot}[5]{%
+  \begin{center}%
+  \IfFileExists{imagens/#1}{%
+    \includegraphics[width=#2, height=#3, keepaspectratio]{imagens/#1}\par
+  }{%
+    \begin{tikzpicture}
+      \draw[icCinza!55, dashed, thick, rounded corners=3pt]
+        (0,0) rectangle ({#2},{#3});
+      \node[align=center, text=icCinza, font=\scriptsize]
+        at ({0.5*#2},{0.5*#3})
+        {foto: \texttt{imagens/#1}\\[1pt] rode \texttt{imagens/baixar-imagens.sh}};
+    \end{tikzpicture}\par
+  }%
+  {\scriptsize #4\par}%
+  {\tiny\color{icCinza} #5\par}%
+  \end{center}}
+
+% mini-gráfico de separabilidade: pontos do plano booleano
+% #1 = rótulo do título; corpo é passado como pontos já desenhados
+\newcommand{\eixosbool}{%
+  \draw[-{Stealth}, icCinza!80] (-0.45,0) -- (1.9,0) node[below, font=\scriptsize] {$x_1$};
+  \draw[-{Stealth}, icCinza!80] (0,-0.45) -- (0,1.9) node[left, font=\scriptsize] {$x_2$};
+  \foreach \p in {0,1.3}{\draw[icCinza!60] (\p,-0.05) -- (\p,0.05); \draw[icCinza!60] (-0.05,\p) -- (0.05,\p);}
+  \node[font=\tiny, text=icCinza] at (1.3,-0.25) {$1$};
+  \node[font=\tiny, text=icCinza] at (-0.25,1.3) {$1$};
+}
+\newcommand{\pzero}[2]{\node[circle, draw=icCiano, thick, fill=white, inner sep=2.2pt] at (#1,#2) {};}
+\newcommand{\pum}[2]{\node[circle, draw=icMagenta, fill=icMagenta, inner sep=2.2pt] at (#1,#2) {};}
+
+\begin{document}
+
+% ------------------------------------------------------------ capa
+\begin{frame}[plain, noframenumbering]
+  \titlepage
+\end{frame}
+
+% ============================================================
+\section{Por que esta disciplina, agora}
+
+% ------------------------------------------------------------
+\begin{frame}{O que ``inteligência computacional'' significa em 2026}
+  \framesubtitle{A ementa lista três paradigmas; a história já votou entre eles}
+
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item<1-> {\color{icNeural}\textbf{Redes neurais artificiais}} — de perceptrons
+          a \emph{Transformers}: hoje são \alert{a} tecnologia dominante em visão,
+          linguagem, fala, biologia e jogos
+    \item<2-> {\color{icEvol}\textbf{Computação evolutiva}} — otimização
+          \emph{sem gradiente}: veremos onde ainda é competitiva (e por que
+          perdeu o centro do palco)
+    \item<3-> {\color{icFuzzy}\textbf{Sistemas nebulosos}} — lógica com graus de
+          verdade: a semente histórica das \emph{relaxações diferenciáveis}
+          que o deep learning usa em todo lugar
+  \end{itemize}
+
+  \onslide<4->{%
+  \begin{ideiabox}
+    O fio condutor do semestre: \textbf{tudo que é diferenciável se treina por
+    gradiente} — e quase tudo que importava foi tornado diferenciável.
+    Os outros paradigmas viram contraponto: o que fazer quando o gradiente
+    \emph{não} existe.
+  \end{ideiabox}}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{O momento em que estamos}
+  \framesubtitle{Este não é um curso de história — mas a história acabou de nos dar razão}
+
+  \begin{columns}[T]
+    \begin{column}{0.60\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.35ex}
+        \item \textbf{2024:} Nobel de \emph{Física} para Hopfield e Hinton
+              (redes neurais); de \emph{Química} para o AlphaFold
+        \item \textbf{Modelos de linguagem} escrevem código, provam teoremas
+              e passam em exames profissionais
+        \item \textbf{Difusão} gera imagens, áudio, vídeo e moléculas
+        \item Tudo é, no fundo, \alert{uma única receita}: redes profundas +
+              gradiente + dados + computação
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \fotoslot{hinton.jpg}{3.2cm}{2.35cm}
+        {G.\ Hinton — Nobel de Física 2024, com J.\ Hopfield}
+        {Foto: Eviatar Bach, Wikimedia Commons, CC BY-SA 3.0}
+    \end{column}
+  \end{columns}
+
+  \vspace{-0.55em}
+  \begin{alertabox}
+    A receita é simples de enunciar e difícil de dominar. Este curso existe
+    para você entender \emph{cada peça} — a ponto de implementá-la do zero.
+  \end{alertabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{O que uma rede profunda fez pela biologia}
+  \framesubtitle{AlphaFold: o problema de 50 anos da estrutura de proteínas}
+
+  \begin{center}
+  \begin{tikzpicture}[node distance=0.55cm and 0.85cm]
+    \node[bloco fuzzy, font=\ttfamily\small] (seq) {MKVLLA\ldots GRT};
+    \node[below=1pt of seq, font=\scriptsize, text=icCinza] {sequência de aminoácidos};
+    \node[bloco, right=of seq, align=center] (rede) {rede profunda\\ (atenção + geometria)};
+    \node[right=1.1cm of rede] (prot) {};
+    \draw[icAzulClaro, very thick,
+          decorate, decoration={coil, aspect=0.62, segment length=3.4pt, amplitude=3.2pt}]
+      ([xshift=0.15cm, yshift=-0.32cm]prot.west) .. controls +(0.55,0.75) and +(-0.5,0.55) ..
+      ++(1.55,0.12);
+    \draw[icMagenta, very thick]
+      ([xshift=0.32cm, yshift=-0.42cm]prot.west) .. controls +(0.9,-0.42) and +(-0.35,-0.62) ..
+      ++(1.5,0.28);
+    \node[below=0.5cm of prot.east, xshift=-0.15cm, font=\scriptsize, text=icCinza]
+      {estrutura 3D prevista};
+    \draw[fluxo] (seq) -- (rede);
+    \draw[fluxo] (rede) -- ([xshift=0.2cm]prot.west |- rede.east);
+  \end{tikzpicture}
+  \end{center}
+
+  \begin{itemize}\setlength{\itemsep}{0.25ex}
+    \item Em 2020 (CASP14), atingiu precisão comparável à experimental —
+          problema aberto desde os anos 1970
+    \item Banco público com centenas de milhões de proteínas (CC BY 4.0);
+          Nobel de \emph{Química} 2024 para Hassabis e Jumper
+  \end{itemize}
+
+  \begin{ideiabox}
+    Por dentro é a receita desta disciplina: modelo diferenciável de ponta a
+    ponta, treinado por gradiente — feito dos blocos de \emph{atenção} em que
+    este curso termina.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Como o semestre funciona}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{tcolorbox}[iccaixa=icCiano, title={Em aula}]
+        \begin{itemize}\setlength{\itemsep}{0.2ex}
+          \item Teoria \emph{com} código: toda ideia central aparece em
+                PyTorch, projetado e lido junto
+          \item Perguntas para discutir — pense antes do clique da resposta
+          \item Simuladores interativos para levar para casa
+        \end{itemize}
+      \end{tcolorbox}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{tcolorbox}[iccaixa=icMagenta, title={Fora de aula}]
+        \begin{itemize}\setlength{\itemsep}{0.2ex}
+          \item Leituras: Goodfellow et al.\ (cap.\ 1, 6), \emph{d2l.ai},
+                Nielsen
+          \item Projeto: reprodução de um artigo, em grupos, com código
+                rodando de verdade
+        \end{itemize}
+      \end{tcolorbox}
+    \end{column}
+  \end{columns}
+
+  \medskip
+  \begin{itemize}
+    \item Material-base: CMU 11-785 (S26), MIT 6.S191, Stanford CS231n —
+          adaptados e traduzidos para a nossa ementa
+  \end{itemize}
+\end{frame}
+
+% ============================================================
+\section{Conexionismo: a aposta que demorou a dar certo}
+
+% ------------------------------------------------------------
+\begin{frame}{Duas visões de como fazer uma máquina pensar}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{tcolorbox}[iccaixa=icCinza, title={IA simbólica}]
+        \begin{itemize}\setlength{\itemsep}{0.2ex}
+          \item Inteligência = manipular \emph{símbolos} com regras
+          \item Conhecimento escrito à mão por especialistas
+          \item Frágil fora do previsto
+        \end{itemize}
+      \end{tcolorbox}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{tcolorbox}[iccaixa=icNeural, title={Conexionismo}]
+        \begin{itemize}\setlength{\itemsep}{0.2ex}
+          \item Inteligência \emph{emerge} de unidades simples conectadas
+          \item Conhecimento fica nos \alert{pesos} — \emph{aprendido}
+                de dados
+          \item Inspiração: o cérebro ($\sim 10^{11}$ neurônios,
+                $\sim 10^{14}$ sinapses)
+        \end{itemize}
+      \end{tcolorbox}
+    \end{column}
+  \end{columns}
+
+  \vspace{-0.25em}
+  \begin{ideiabox}
+    A pergunta da aula de hoje: unidades tão simples — somar e comparar com
+    um limiar — \emph{conseguem} computar algo interessante? Sim, e o
+    argumento é surpreendentemente concreto.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Linha do tempo — 80 anos em um slide}
+  \begin{itemize}\setlength{\itemsep}{0.2ex}
+    \item<1-> {\color{icAzul}\textbf{1943}} McCulloch \& Pitts: o neurônio como
+          \emph{unidade de limiar} — redes de neurônios computam lógica
+    \item<1-> {\color{icAzul}\textbf{1949}} Hebb: sinapses que se reforçam com o
+          uso — aprendizado local, sem professor
+    \item<2-> {\color{icAzul}\textbf{1958}} Rosenblatt: o \alert{Perceptron} —
+          pela primeira vez, os pesos são \emph{aprendidos} de exemplos
+    \item<2-> {\color{icCarmim}\textbf{1969}} Minsky \& Papert: limites do
+          perceptron simples (XOR) $\Rightarrow$ primeiro ``inverno''
+    \item<3-> {\color{icAzul}\textbf{1986}} Rumelhart, Hinton \& Williams:
+          retropropagação populariza o treino de redes \emph{multicamadas}
+    \item<3-> {\color{icAzul}\textbf{2012}} AlexNet: GPUs + dados —
+          deep learning vence em visão e nunca mais sai
+    \item<4-> {\color{icMagenta}\textbf{2017--hoje}} o Transformer
+          (\emph{atenção}) unifica linguagem, visão e áudio — é onde este
+          curso quer chegar
+  \end{itemize}
+\end{frame}
+
+% ============================================================
+\section{O perceptron por dentro}
+
+% ------------------------------------------------------------
+\begin{frame}{O original biológico}
+  \framesubtitle{O neurônio de verdade — e o mapa que McCulloch e Pitts fizeram dele}
+
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{center}
+      \scalebox{0.74}{%
+      \begin{tikzpicture}[x=0.82cm, y=0.82cm]
+        % dendritos
+        \foreach \a/\b in {150/1.55, 175/1.7, 205/1.6, 125/1.35}{
+          \draw[icCiano, thick] (0,0) -- (\a:\b)
+            \foreach \d in {-22,22}{ -- +(\a+\d:0.45) -- +(\a:0)} ;}
+        % soma
+        \fill[icAzul!14] (0,0) circle (0.42);
+        \draw[icAzul, thick] (0,0) circle (0.42);
+        \node[font=\scriptsize, text=icAzul] at (0,0) {soma};
+        % axonio
+        \draw[icCinza!85, very thick] (0.42,0) -- (2.6,0);
+        \foreach \d in {28,-28,0}{
+          \draw[icMagenta, thick] (2.6,0) -- +(\d:0.55);}
+        % rotulos
+        \node[font=\scriptsize, text=icCiano, align=center] at (-1.75,1.35)
+          {dendritos\\ (entradas)};
+        \node[font=\scriptsize, text=icCinza] at (1.5,0.3) {axônio};
+        \node[font=\scriptsize, text=icMagenta, align=center] at (3.15,-0.85)
+          {terminais\\ sinápticos (saída)};
+      \end{tikzpicture}}
+      \end{center}
+      {\scriptsize Esquema; o neurônio real tem $10^{3}$--$10^{4}$ sinapses
+      de entrada.\par}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.35ex}
+        \item Dendritos $\to$ \alert{entradas} $x_i$
+        \item Eficácia da sinapse $\to$ \alert{peso} $w_i$
+        \item Soma integra $\to$ $\vw^{\!\top}\vx$
+        \item Limiar de disparo $\to$ \alert{ativação} $\ativ$
+      \end{itemize}
+      \begin{ideiabox}
+        A abstração de 1943 mantém \emph{só} somar e comparar com limiar —
+        e ainda assim basta para computar qualquer coisa.
+      \end{ideiabox}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{O modelo}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{defbox}{Neurônio de limiar (perceptron)}
+        Campo local induzido \(\campo = \vw^{\!\top}\vx + b\); saída
+        \(\hat{y} = \ativ(\campo)\), com \(\ativ\) o degrau:
+        \(\ativ(\campo) = 1\) se \(\campo \ge 0\), senão \(0\).
+      \end{defbox}
+      \begin{itemize}\setlength{\itemsep}{0.2ex}
+        \item $\vw$: quanto cada entrada \emph{importa}
+        \item $b$: quão fácil é disparar
+        \item $\ativ$: a decisão (não linearidade)
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{center}
+        \scalebox{0.72}{\perceptron}
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \begin{ideiabox}
+    Geometria: \(\vw^{\!\top}\vx + b = 0\) é um \emph{hiperplano}; $\vw$ é a
+    normal, $b$ desloca. O perceptron é um separador linear — e essa frase
+    inteira já contém a sua limitação.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{A geometria da decisão}
+  \framesubtitle{Quatro pontos bastam para ver o que o perceptron pode — e o que não pode}
+
+  \begin{columns}[T]
+    \begin{column}{0.31\textwidth}
+      \centering {\color{icVerde}\bfseries\small E: separável}\\[2pt]
+      \begin{tikzpicture}[scale=1.05]
+        \eixosbool
+        \pzero{0}{0}\pzero{0}{1.3}\pzero{1.3}{0}
+        \pum{1.3}{1.3}
+        \draw[icVerde, very thick, dashed] (0.55,1.75) -- (1.75,0.55);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \centering {\color{icVerde}\bfseries\small OU: separável}\\[2pt]
+      \begin{tikzpicture}[scale=1.05]
+        \eixosbool
+        \pzero{0}{0}
+        \pum{0}{1.3}\pum{1.3}{0}\pum{1.3}{1.3}
+        \draw[icVerde, very thick, dashed] (-0.3,0.95) -- (0.95,-0.3);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \centering {\color{icCarmim}\bfseries\small XOR: impossível}\\[2pt]
+      \begin{tikzpicture}[scale=1.05]
+        \eixosbool
+        \pzero{0}{0}\pzero{1.3}{1.3}
+        \pum{0}{1.3}\pum{1.3}{0}
+        \draw[icCinza!55, thick, dashed] (-0.3,0.95) -- (1.75,0.6);
+        \draw[icCinza!55, thick, dashed] (0.5,-0.35) -- (0.85,1.8);
+        \node[text=icCarmim, font=\Large\bfseries] at (1.62,1.62) {?};
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+
+  \medskip
+  \begin{itemize}\setlength{\itemsep}{0.2ex}
+    \item {\color{icMagenta}$\bullet$}~classe 1 \quad
+          {\color{icCiano}$\circ$}~classe 0 \quad — uma reta
+          $\vw^{\!\top}\vx + b = 0$ decide tudo
+    \item No XOR, qualquer reta deixa um ponto do lado errado: o problema não
+          é o algoritmo de treino, é a \alert{família de funções}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Perceptrons são portas lógicas}
+  \framesubtitle{O argumento de McCulloch--Pitts, em três linhas de pesos}
+
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      Com entradas booleanas $x_i \in \{0,1\}$ e degrau em $\campo \ge 0$:
+      \begin{itemize}\setlength{\itemsep}{0.35ex}
+        \item \textbf{E:}\; $\vw = (1,1)$, $b = -1{,}5$
+              \;$\Rightarrow$\; dispara só com $x_1 = x_2 = 1$
+        \item \textbf{OU:}\; $\vw = (1,1)$, $b = -0{,}5$
+        \item \textbf{NÃO:}\; $w = -1$, $b = 0{,}5$
+      \end{itemize}
+
+      \smallskip
+      \begin{teobox}{Universalidade booleana}
+        \{E, OU, NÃO\} é um conjunto universal. Logo, \emph{redes} de
+        perceptrons computam \textbf{qualquer função booleana} — qualquer
+        circuito digital, qualquer tabela-verdade.
+      \end{teobox}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{center}
+        \begin{tikzpicture}
+          \node[neuronio entrada] (a) {$x_1$};
+          \node[neuronio entrada, below=0.85cm of a] (b) {$x_2$};
+          \node[neuronio, right=1.8cm of a, yshift=-0.62cm] (e) {E};
+          \draw[sinapse] (a) -- node[peso] {$1$} (e);
+          \draw[sinapse] (b) -- node[peso] {$1$} (e);
+          \node[neuronio saida, right=1.5cm of e] (s) {$\hat{y}$};
+          \draw[sinapse destac] (e) -- (s);
+        \end{tikzpicture}
+      \end{center}
+      \small O neurônio é um \emph{votante com limiar}; a lógica é o caso
+      particular em que os votos são inteiros.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Rosenblatt: os pesos podem ser aprendidos}
+  \begin{algbox}{Regra do perceptron (1958)}
+    Para cada exemplo $(\vx, y)$ com $y \in \{0,1\}$: calcule
+    $\hat{y} = \ativ(\vw^{\!\top}\vx + b)$ e, se errou, corrija na direção
+    do erro:
+    \[
+      \vw \leftarrow \vw + \termo{\taxa}{taxa de aprendizado}
+                     \,(\,\termo{y - \hat{y}}{erro: $-1$, $0$ ou $+1$}\,)\,\vx
+      \qquad
+      b \leftarrow b + \taxa\,(y - \hat{y})
+    \]
+  \end{algbox}
+
+  \begin{teobox}{Convergência do perceptron (Novikoff, 1962)}
+    Se os dados são \alert{linearmente separáveis}, a regra converge em um
+    número finito de atualizações. Se não são — ela oscila para sempre.
+  \end{teobox}
+
+  \begin{itemize}
+    \item Note a forma \(\vw \leftarrow \vw + \Delta\vw\): é o \emph{ancestral
+          direto} da descida de gradiente que usaremos o semestre todo
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{1958, em hardware: o Mark I Perceptron}
+  \framesubtitle{Antes de ser uma linha de PyTorch, o peso era um botão girado por um motor}
+
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \fotoslot{mark1.jpg}{4.6cm}{2.75cm}
+        {O Mark I Perceptron, do Cornell Aeronautical Laboratory}
+        {Foto: National Museum of the U.S. Navy — domínio público}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.35ex}
+        \item ``Retina'' de $20{\times}20$ fotocélulas: $\vx$ com 400
+              dimensões
+        \item Cada peso $w_i$ era um \alert{potenciômetro}; a regra girava
+              os botões com motores elétricos
+        \item Em 1958, a imprensa prometeu máquinas que andariam e
+              falariam
+      \end{itemize}
+      \begin{ideiabox}
+        \emph{Hype} seguido de decepção não é invenção da nossa década —
+        o ciclo 1958--1969 calibra bem a leitura das manchetes de hoje.
+      \end{ideiabox}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}[fragile]{A regra do perceptron em PyTorch}
+  \framesubtitle{Dez linhas — aprendendo a porta E}
+
+\begin{lstlisting}
+import torch
+
+X = torch.tensor([[0.,0.],[0.,1.],[1.,0.],[1.,1.]])
+y = torch.tensor([0., 0., 0., 1.])            # porta E
+
+w, b = torch.zeros(2), torch.zeros(1)
+for epoca in range(10):
+    for xi, yi in zip(X, y):
+        y_hat = (w @ xi + b >= 0).float()     # degrau
+        erro  = yi - y_hat                    # -1, 0 ou +1
+        w += erro * xi                        # regra do perceptron
+        b += erro
+\end{lstlisting}
+
+  \begin{itemize}\setlength{\itemsep}{0.2ex}
+    \item Sem \texttt{backward()}, sem gradiente: a regra é \emph{ad hoc} —
+          funciona porque o degrau + erro discreto conspiram a favor
+    \item Troque a porta E por XOR na linha 4 e rode: \alert{nunca converge}.
+          Por quê?
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Para discutir em aula}
+  \begin{quizbox}
+    O perceptron simples aprende E e OU sem dificuldade. Então, com paciência e
+    uma taxa de aprendizado bem escolhida, ele também acaba aprendendo XOR
+    ($x_1 \oplus x_2$).
+
+    \smallskip
+    \opcoes{Verdadeiro \;/\; Falso}
+  \end{quizbox}
+
+  \pause
+
+  \begin{respbox}
+    \textbf{Falso — e não é questão de paciência.} Vimos a geometria:
+    \alert{nenhuma reta} separa $\{(0,0),(1,1)\}$ de $\{(0,1),(1,0)\}$, e o
+    teorema de convergência exigia exatamente separabilidade. Foi este
+    exemplo, em Minsky \& Papert (1969), que congelou a área por uma década.
+    A saída não é um perceptron melhor: é \textbf{empilhar} perceptrons.
+  \end{respbox}
+\end{frame}
+
+% ============================================================
+\section{Profundidade: de portas a aproximadores universais}
+
+% ------------------------------------------------------------
+\begin{frame}{Uma camada oculta resolve o XOR}
+  \framesubtitle{XOR $=$ (OU) E NÃO (E) — a rede escreve essa fórmula em pesos}
+
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{center}
+        \begin{tikzpicture}
+          \node[neuronio entrada] (x1) {$x_1$};
+          \node[neuronio entrada, below=1.05cm of x1] (x2) {$x_2$};
+          \node[neuronio, right=2cm of x1] (h1) {OU};
+          \node[neuronio, right=2cm of x2] (h2) {E};
+          \node[neuronio saida, right=5.3cm of x1, yshift=-0.8cm] (y) {$\hat{y}$};
+          \draw[sinapse] (x1) -- node[peso] {$1$} (h1);
+          \draw[sinapse] (x2) -- node[peso] {$1$} (h1);
+          \draw[sinapse] (x1) -- node[peso] {$1$} (h2);
+          \draw[sinapse] (x2) -- node[peso] {$1$} (h2);
+          \draw[sinapse destac] (h1) -- node[peso] {$1$} (y);
+          \draw[sinapse destac] (h2) -- node[peso] {$-2$} (y);
+        \end{tikzpicture}
+      \end{center}
+      \small Limiares: $h_1$ dispara com $\campo \ge 0{,}5$; $h_2$ com
+      $\campo \ge 1{,}5$; $\hat y$ com $\campo \ge 0{,}5$. Verifique nas
+      quatro entradas.
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.35ex}
+        \item $h_1$ e $h_2$ são \emph{features} construídas: ``algum ligado''
+              e ``ambos ligados''
+        \item Na saída, uma única reta sobre $(h_1, h_2)$ resolve — o
+              próximo slide mostra isso acontecendo
+      \end{itemize}
+      \begin{ideiabox}
+        A tese do deep learning inteiro: camadas não adicionam só capacidade —
+        adicionam \textbf{representações}.
+      \end{ideiabox}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{O que a camada oculta faz com o espaço}
+  \framesubtitle{Os mesmos quatro pontos, antes e depois de $(h_1, h_2)$}
+
+  \begin{columns}[T]
+    \begin{column}{0.34\textwidth}
+      \centering {\bfseries\small Espaço de entrada $(x_1, x_2)$}\\[2pt]
+      \begin{tikzpicture}[scale=1.12]
+        \eixosbool
+        \pzero{0}{0}\pzero{1.3}{1.3}
+        \pum{0}{1.3}\pum{1.3}{0}
+        \node[text=icCarmim, font=\bfseries\small] at (1.55,1.7) {?};
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.16\textwidth}
+      \vspace{2.1cm}
+      \centering
+      {\Large $\xrightarrow{\;h\;}$}\\[2pt]
+      {\scriptsize\color{icCinza} camada oculta}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \centering {\bfseries\small Espaço oculto $(h_1, h_2)$}\\[2pt]
+      \begin{tikzpicture}[scale=1.12]
+        \draw[-{Stealth}, icCinza!80] (-0.45,0) -- (1.9,0) node[below, font=\scriptsize] {$h_1$};
+        \draw[-{Stealth}, icCinza!80] (0,-0.45) -- (0,1.9) node[left, font=\scriptsize] {$h_2$};
+        \node[font=\tiny, text=icCinza] at (1.3,-0.25) {$1$};
+        \node[font=\tiny, text=icCinza] at (-0.25,1.3) {$1$};
+        \pzero{0}{0}\pzero{1.3}{1.3}
+        \pum{1.3}{0}
+        \node[font=\tiny, text=icCinza] at (1.3,-0.55) {$(0,1)$ e $(1,0)$ caem juntos};
+        \draw[icVerde, very thick, dashed] (0.55,-0.35) -- (1.85,0.95);
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+
+  \medskip
+  \begin{itemize}\setlength{\itemsep}{0.2ex}
+    \item A camada oculta \alert{dobra o espaço}: dois pontos que precisavam
+          da mesma resposta são mapeados para o \emph{mesmo lugar}
+    \item Depois disso, o problema volta a ser linear — e o perceptron de
+          saída dá conta
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Do booleano ao contínuo}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{center}
+        \scalebox{0.52}{\mlp{2,4,1}}
+      \end{center}
+      \small Troque o degrau por uma $\ativ$ suave ($\sig$, tanh,
+      $\relu$) e tudo vira diferenciável. Intuição do teorema: cada
+      neurônio contribui um ``degrau''; a soma de degraus suficientes vira
+      uma tabela de consulta suave.
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{teobox}{Aproximação universal (Cybenko 1989; Hornik 1991)}
+        Uma rede com \emph{uma} camada oculta e ativação não polinomial
+        aproxima qualquer função contínua em um compacto de $\R^n$.
+      \end{teobox}
+      \vspace{-0.25em}
+      \begin{alertabox}
+        O teorema diz que os pesos \emph{existem} — não quantos neurônios
+        custam, nem como \emph{encontrá-los}. Representação, não aprendizado.
+      \end{alertabox}
+    \end{column}
+  \end{columns}
+
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Por que fundo, e não largo?}
+  \framesubtitle{O resultado mais importante da aula — e o mais fácil de perder}
+
+  Paridade de $n$ bits, \(x_1 \oplus \dots \oplus x_n\):
+
+  \begin{itemize}\setlength{\itemsep}{0.35ex}
+    \item<1-> Com \textbf{uma} camada oculta, a construção por tabela-verdade
+          usa \(\mdestaque{icCarmim}{2^{n-1}}\) neurônios; circuitos rasos de
+          E/OU exigem tamanho exponencial (Håstad, 1986)
+    \item<2-> Com \textbf{profundidade}: uma árvore de XORs de 2 entradas usa
+          \(\mdestaque{icVerde}{\mathcal{O}(n)}\) neurônios em
+          \(\mathcal{O}(\log n)\) camadas
+  \end{itemize}
+
+  \onslide<3->{%
+  \vspace{-0.5em}
+  \begin{ideiabox}
+    Profundidade compra \textbf{reuso de computação intermediária}: cada camada
+    calcula subexpressões que as seguintes combinam; a rede rasa trata caso a
+    caso. É por isso que você escreve programas com funções, não uma tabela.
+  \end{ideiabox}}
+
+  \onslide<4->{%
+  \vspace{-0.6em}
+  \begin{itemize}
+    \item \textbf{Fontes:} Raj, CMU 11-785, Lecs.\ 1--2; Håstad (1986);
+          para redes contínuas, Telgarsky (2016) e Eldan \& Shamir (2016)
+          — o ``deep'' é contagem de circuito, não moda
+  \end{itemize}}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Para discutir em aula}
+  \begin{quizbox}
+    Pelo teorema da aproximação universal, uma camada oculta basta. Logo, redes
+    profundas são um luxo de engenharia: qualquer coisa que uma rede profunda
+    faz, uma rede rasa faz igualmente bem na prática.
+
+    \smallskip
+    \opcoes{Verdadeiro \;/\; Falso}
+  \end{quizbox}
+
+  \pause
+
+  \begin{respbox}
+    \textbf{Falso.} ``Existe uma rede rasa equivalente'' é verdade; ``do mesmo
+    tamanho'' não é. Para famílias como a paridade, a versão rasa é
+    \alert{exponencialmente} maior — impossível de armazenar, quanto mais de
+    treinar. Universalidade é sobre \emph{o que é representável};
+    profundidade é sobre \emph{a que custo}. O semestre vive nessa distância.
+  \end{respbox}
+\end{frame}
+
+% ============================================================
+\section{O que vem pela frente}
+
+% ------------------------------------------------------------
+\begin{frame}[fragile]{Prévia: o XOR treinado por gradiente}
+  \framesubtitle{O que a regra do perceptron não conseguiu, o gradiente resolve em 15 linhas}
+
+\begin{lstlisting}
+import torch, torch.nn as nn
+
+X = torch.tensor([[0.,0.],[0.,1.],[1.,0.],[1.,1.]])
+y = torch.tensor([[0.],[1.],[1.],[0.]])            # XOR
+
+modelo = nn.Sequential(nn.Linear(2, 2), nn.Tanh(),
+                       nn.Linear(2, 1), nn.Sigmoid())
+otim  = torch.optim.SGD(modelo.parameters(), lr=0.5)
+perda = nn.BCELoss()
+
+for passo in range(5000):
+    otim.zero_grad()
+    L = perda(modelo(X), y)                # quao errado estou?
+    L.backward()                           # retropropagacao
+    otim.step()                            # w <- w - lr * grad
+\end{lstlisting}
+
+  \begin{itemize}
+    \item Repare: degrau $\to$ \texttt{Tanh}/\texttt{Sigmoid}. Sem
+          suavidade não há derivada; sem derivada não há \texttt{backward()}
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{As três linhas que valem o semestre}
+  \[
+    \texttt{L.backward()}
+    \;\Longrightarrow\;
+    \deriv{\erro}{\vw} \text{ para \emph{todos} os pesos, pela regra da cadeia}
+  \]
+  \[
+    \texttt{otim.step()}
+    \;\Longrightarrow\;
+    \mdestaque{icMagenta}{\vw \leftarrow \vw - \taxa \deriv{\erro}{\vw}}
+  \]
+
+  \begin{itemize}\setlength{\itemsep}{0.35ex}
+    \item Compare com a regra do perceptron: mesma forma
+          \(\vw \leftarrow \vw + \Delta\vw\), mas agora \(\Delta\vw\) vem de um
+          \alert{princípio} — minimizar uma perda diferenciável — e não de uma
+          heurística
+    \item Isso escala do nosso XOR de 9 parâmetros aos modelos de linguagem com
+          $10^{12}$: \emph{o algoritmo é o mesmo}
+    \item Aulas 2--4: descida de gradiente, grafo computacional e a
+          retropropagação implementada do zero (nosso mini-autograd)
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Mapa da disciplina}
+  \begin{columns}[T]
+    \begin{column}{0.4\textwidth}
+      \begin{tcolorbox}[iccaixa=icNeural, title={Redes neurais e deep learning}]
+        \small Perceptron $\to$ MLP $\to$ retropropagação e autograd $\to$
+        otimização e regularização modernas $\to$ CNNs $\to$ sequências $\to$
+        Hopfield moderno $\to$ atenção e Transformers
+      \end{tcolorbox}
+    \end{column}
+    \begin{column}{0.28\textwidth}
+      \begin{tcolorbox}[iccaixa=icEvol, title={Computação evolutiva}]
+        \small Otimização \emph{sem} gradiente: AGs, estratégias evolutivas,
+        CMA-ES. Quando a derivada não existe — e o custo de viver sem ela.
+      \end{tcolorbox}
+    \end{column}
+    \begin{column}{0.28\textwidth}
+      \begin{tcolorbox}[iccaixa=icFuzzy, title={Sistemas nebulosos}]
+        \small Pertinência gradual $\to$ relaxações diferenciáveis: softmax,
+        \emph{gating}, atenção como consulta ``fuzzy''.
+      \end{tcolorbox}
+    \end{column}
+  \end{columns}
+
+  \medskip
+  \begin{itemize}\setlength{\itemsep}{0.25ex}
+    \item O bloco {\color{icNeural}\textbf{neural}} carrega a maior parte
+          da carga horária; os outros dois entram como \emph{contraponto}
+    \item Ao final, você deve saber ler um artigo atual de deep learning —
+          e reproduzi-lo
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Simuladores interativos desta unidade}
+  \framesubtitle{Para mexer em casa — cada um cabe numa página HTML, sem instalar nada}
+
+  \begin{itemize}\setlength{\itemsep}{0.4ex}
+    \item {\color{icCiano}\textbf{Playground do perceptron}} — arraste pontos
+          no plano, veja a reta $\vw^{\!\top}\vx + b = 0$ se mover a cada
+          atualização da regra; presets E, OU e XOR (para ver a oscilação
+          eterna com os próprios olhos)
+    \item {\color{icAzulClaro}\textbf{O espaço oculto do XOR}} — a
+          transformação $(x_1,x_2) \to (h_1,h_2)$ animada, com controle dos
+          pesos da camada oculta
+    \item {\color{icAzul}\textbf{Aproximador universal 1D}} — some ``degraus''
+          de neurônios sigmoide para caber numa função-alvo; contador de
+          neurônios visível
+    \item {\color{icMagenta}\textbf{Largo vs.\ fundo}} — paridade de $n$ bits:
+          o mesmo problema resolvido raso e fundo, com o número de neurônios
+          lado a lado
+  \end{itemize}
+
+  \begin{ideiabox}
+    Regra da disciplina: se um conceito tem geometria, ele ganha um simulador.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Para casa}
+  \begin{exbox}{1 — Portas na mão}
+    Encontre pesos e viés de um perceptron de degrau para NAND. Em seguida,
+    usando só NANDs, desenhe uma rede de duas camadas que computa XOR e
+    escreva os pesos de cada neurônio.
+  \end{exbox}
+
+  \begin{exbox}{2 — O fracasso, observado}
+    Rode o código da regra do perceptron desta aula trocando a porta E por
+    XOR. Registre $\vw$ e $b$ ao longo de 50 épocas e descreva o que acontece.
+    Depois rode a versão com gradiente e compare.
+  \end{exbox}
+
+  \begin{itemize}\setlength{\itemsep}{0.25ex}
+    \item \textbf{Leitura:} Goodfellow et al., cap.\ 1 e seções 6.1--6.4;
+          Nielsen, cap.\ 1 (aproximação universal, visual)
+    \item \textbf{Opcional:} 11-785 (S26), Lectures 1--2, para o argumento
+          de profundidade vs.\ largura em detalhe
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Referências}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      {\color{icCinza}\bfseries\scriptsize FUNDADORES}
+      {\scriptsize
+      \begin{itemize}\setlength{\itemsep}{0.15ex}
+        \item McCulloch, W.; Pitts, W.\ (1943). A logical calculus of the
+              ideas immanent in nervous activity. \emph{Bull.\ Math.\
+              Biophysics} 5.
+        \item Rosenblatt, F.\ (1958). The perceptron: a probabilistic model
+              [\ldots]. \emph{Psychological Review} 65(6).
+        \item Novikoff, A.\ (1962). On convergence proofs on perceptrons.
+              \emph{Symp.\ Math.\ Theory of Automata}.
+        \item Minsky, M.; Papert, S.\ (1969). \emph{Perceptrons}. MIT Press.
+        \item Rumelhart; Hinton; Williams (1986). Learning representations
+              by back-propagating errors. \emph{Nature} 323.
+        \item Cybenko (1989), \emph{MCSS} 2; Hornik (1991),
+              \emph{Neural Networks} 4.
+      \end{itemize}}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      {\color{icCinza}\bfseries\scriptsize PROFUNDIDADE E HOJE}
+      {\scriptsize
+      \begin{itemize}\setlength{\itemsep}{0.15ex}
+        \item Håstad (1986). Almost optimal lower bounds for small depth
+              circuits. \emph{STOC}. (tb.\ Ajtai 1983; Furst, Saxe \& Sipser
+              1984)
+        \item Telgarsky (2016); Eldan \& Shamir (2016). \emph{COLT} —
+              separações de profundidade para redes contínuas.
+        \item Krizhevsky; Sutskever; Hinton (2012). ImageNet classification
+              with deep CNNs. \emph{NeurIPS}.
+        \item Jumper et al.\ (2021). Highly accurate protein structure
+              prediction with AlphaFold. \emph{Nature} 596.
+        \item Raj, B. \emph{11-785 Introduction to Deep Learning}, CMU
+              (S26), Lecs.\ 1--2 — \texttt{deeplearning.cs.cmu.edu}
+      \end{itemize}}
+    \end{column}
+  \end{columns}
+  \smallskip
+  {\scriptsize \textbf{Livros:} Goodfellow, Bengio \& Courville (2016),
+  \emph{Deep Learning}, MIT Press \textbullet\ Nielsen (2015),
+  \texttt{neuralnetworksanddeeplearning.com}\par
+  \textbf{Imagens:} Wikimedia Commons — E.\ Bach (CC BY-SA 3.0);
+  National Museum of the U.S.\ Navy (domínio público).\par}
+\end{frame}
+
+\end{document}

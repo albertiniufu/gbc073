@@ -1,0 +1,311 @@
+%% ============================================================
+%%  handoutInteligenciaComputacional.sty
+%%  Estilo para handouts da disciplina GBC073 — Inteligência
+%%  Computacional (pt-BR).
+%%  Irmão de beamerthemeInteligenciaComputacional.sty: mesma
+%%  paleta, mesmas caixas, mesmas macros matemáticas — para
+%%  classe `article`. O conteúdo copia de um formato para o outro
+%%  sem edição.
+%%  Compilar com XeLaTeX ou LuaLaTeX.
+%% ============================================================
+\ProvidesPackage{handoutInteligenciaComputacional}[2026/08/31 Handout IC pt-BR]
+
+\RequirePackage[a4paper, top=2.1cm, bottom=2.2cm, left=2.3cm, right=2.3cm,
+                headsep=10pt, footskip=22pt]{geometry}
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc, fit, chains,
+                decorations.pathmorphing}
+\RequirePackage[most]{tcolorbox}
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+\RequirePackage{mathtools}
+\RequirePackage{bm}
+\RequirePackage{etoolbox}
+\RequirePackage{fontspec}
+\RequirePackage{titlesec}
+\RequirePackage{enumitem}
+\RequirePackage{fancyhdr}
+\RequirePackage{booktabs}
+\RequirePackage{needspace}
+\RequirePackage{microtype}
+\RequirePackage{hyperref}
+
+%% ------------------------------------------------------------
+%% 1. PALETA (idêntica à do tema Beamer)
+%% ------------------------------------------------------------
+\definecolor{icAzul}{HTML}{16357C}       % primária
+\definecolor{icAzulClaro}{HTML}{3F6DC4}
+\definecolor{icCiano}{HTML}{0D8A99}      % definições
+\definecolor{icMagenta}{HTML}{D12E6E}    % destaque / ação
+\definecolor{icDourado}{HTML}{E9A100}    % intuição
+\definecolor{icCarmim}{HTML}{B3121B}     % alerta
+\definecolor{icVerde}{HTML}{1E8E5A}      % fechamento
+\definecolor{icCinza}{HTML}{55607A}      % texto secundário
+\definecolor{icFundo}{HTML}{F5F7FC}
+\definecolor{icFundoQuiz}{HTML}{FDF6EC}
+% paradigmas
+\definecolor{icNeural}{HTML}{16357C}
+\definecolor{icEvol}{HTML}{1B7E72}
+\definecolor{icFuzzy}{HTML}{D12E6E}
+% apelidos da versão violeta (compatibilidade)
+\colorlet{icRoxo}{icAzul}
+\colorlet{icRoxoClaro}{icAzulClaro}
+\hypersetup{colorlinks=true, allcolors=icAzulClaro,
+            pdftitle={Handout — Inteligência Computacional}}
+
+%% ------------------------------------------------------------
+%% 2. TIPOGRAFIA
+%% ------------------------------------------------------------
+\IfFontExistsTF{Fira Sans}{%
+  \setsansfont{Fira Sans}[Scale=0.96,
+    ItalicFont     = Fira Sans Italic,
+    BoldFont       = Fira Sans SemiBold,
+    BoldItalicFont = Fira Sans SemiBold Italic]
+}{\setsansfont{TeX Gyre Heros}[Scale=0.96]}
+\IfFontExistsTF{Fira Sans}{%
+  \setmainfont{Fira Sans}[Scale=0.96,
+    ItalicFont     = Fira Sans Italic,
+    BoldFont       = Fira Sans SemiBold,
+    BoldItalicFont = Fira Sans SemiBold Italic]
+}{\setmainfont{TeX Gyre Heros}[Scale=0.96]}
+\IfFontExistsTF{Fira Mono}{\setmonofont{Fira Mono}[Scale=0.88]}%
+  {\setmonofont{Latin Modern Mono}[Scale=0.92]}
+
+\linespread{1.06}
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+\setlist{leftmargin=1.25em, itemsep=0.15em, topsep=0.25em, parsep=0pt}
+\setlist[itemize,1]{label=\textcolor{icMagenta}{\footnotesize$\blacktriangleright$}}
+\setlist[itemize,2]{label=\textcolor{icCiano}{\footnotesize$\circ$}}
+\setlist[enumerate,1]{label=\textcolor{icMagenta}{\bfseries\arabic*.}}
+
+%% ------------------------------------------------------------
+%% 3. TÍTULOS DE SEÇÃO
+%% ------------------------------------------------------------
+\titleformat{\section}[hang]
+  {\needspace{3\baselineskip}\normalfont\Large\bfseries\color{icAzul}}
+  {\colorbox{icMagenta}{\color{white}\bfseries\;\thesection\;}\hspace{0.6em}}{0pt}{}
+  [{\vspace{2pt}\color{icAzul!22}\titlerule[0.8pt]}]
+\titleformat{\subsection}[hang]
+  {\needspace{2.5\baselineskip}\normalfont\large\bfseries\color{icAzulClaro}}
+  {\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{1.5em}{0.6em}
+\titlespacing*{\subsection}{0pt}{1.0em}{0.35em}
+
+%% ------------------------------------------------------------
+%% 4. CABEÇALHO E RODAPÉ
+%% ------------------------------------------------------------
+\newcommand{\iccurso}{Inteligência Computacional}
+\newcommand{\icaula}{}
+\newcommand{\icprof}{}
+\newcommand{\setaula}[1]{\renewcommand{\icaula}{#1}}
+\newcommand{\setprof}[1]{\renewcommand{\icprof}{#1}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyhead[L]{\footnotesize\color{icCinza}\iccurso\ \textbullet\ \icaula}
+\fancyhead[R]{\footnotesize\color{icCinza}\icprof}
+\fancyfoot[C]{{\color{icAzul!18}\rule{\linewidth}{0.8pt}}\\[2pt]
+  \footnotesize\color{icCinza}\thepage}
+
+%% Faixa de título
+\newcommand{\capa}[4]{% #1 título  #2 subtítulo  #3 autoria  #4 crédito
+  \thispagestyle{empty}
+  \noindent\begin{tcolorbox}[enhanced, colback=icAzul, colframe=icAzul,
+    boxrule=0pt, arc=2mm, left=5mm, right=5mm, top=4mm, bottom=4mm,
+    borderline south={2.6pt}{0pt}{icMagenta}]
+    {\footnotesize\color{icDourado}\bfseries\MakeUppercase{\iccurso} \textbullet\ Universidade Federal de Uberlândia}\\[0.5em]
+    {\LARGE\bfseries\color{white} #1}\\[0.35em]
+    {\color{icDourado} #2}\\[0.8em]
+    {\small\color{white!88!icAzul} #3}\\[0.15em]
+    {\footnotesize\color{white!68!icAzul} #4}
+  \end{tcolorbox}\vspace{0.4em}}
+
+%% ------------------------------------------------------------
+%% 5. CAIXAS TEMÁTICAS (mesmos nomes e cores do tema Beamer)
+%% ------------------------------------------------------------
+\tcbset{iccaixa/.style={
+  enhanced, sharp corners=all, frame hidden, boxrule=0pt,
+  colback=#1!7!white,
+  borderline west={2.8pt}{0pt}{#1},
+  left=6pt, right=6pt, top=3.5pt, bottom=3.5pt,
+  coltitle=#1!72!black, fonttitle=\bfseries,
+  detach title,
+  before upper={\ifdefempty{\tcbtitletext}{}{\tcbtitle\par\vspace{1.5pt}}},
+  before skip=4pt, after skip=4pt,
+  breakable,
+  title after break={\textcolor{#1}{\itshape(continua)}},
+}}
+
+\newtcolorbox{defbox}[2][]{iccaixa=icCiano,
+  title={Definição\notblank{#2}{ — #2}{}}, #1}
+\newtcolorbox{teobox}[2][]{iccaixa=icAzulClaro,
+  title={Teorema\notblank{#2}{ — #2}{}}, #1}
+\newtcolorbox{algbox}[2][]{iccaixa=icAzul,
+  title={Algoritmo\notblank{#2}{ — #2}{}}, #1}
+\newtcolorbox{exbox}[2][]{iccaixa=icMagenta,
+  title={Exercício\notblank{#2}{ #2}{}}, #1}
+\newtcolorbox{ideiabox}[1][]{iccaixa=icDourado, title={Intuição}, #1}
+\newtcolorbox{alertabox}[1][]{iccaixa=icCarmim, title={Cuidado}, #1}
+\newtcolorbox{quizbox}[1][]{iccaixa=icDourado,
+  colback=icFundoQuiz, title={Para discutir em aula}, #1}
+\newtcolorbox{respbox}[1][]{iccaixa=icVerde, title={Fechamento}, #1}
+
+\newcommand{\opcoes}[1]{{\small\itshape\color{icCinza}#1}}
+
+%% ------------------------------------------------------------
+%% 6. MACROS MATEMÁTICAS (idênticas às do tema Beamer)
+%% ------------------------------------------------------------
+% gerais
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\D}{\mathcal{D}}
+\newcommand{\Hip}{\mathcal{H}}
+\newcommand{\vet}[1]{\bm{#1}}
+\newcommand{\vx}{\vet{x}}
+\newcommand{\vw}{\vet{w}}
+\newcommand{\vy}{\vet{y}}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\deriv}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\defeq}{\coloneqq}
+% redes neurais
+\newcommand{\ativ}{\varphi}
+\newcommand{\sig}{\sigma}
+\DeclareMathOperator{\relu}{ReLU}
+\DeclareMathOperator{\soft}{softmax}
+\newcommand{\erro}{E}
+\newcommand{\taxa}{\eta}
+\newcommand{\campo}{v}
+\newcommand{\pesoij}[2]{w_{#1#2}}
+% computação evolutiva
+\newcommand{\apt}{f}
+\newcommand{\pop}{P}
+\newcommand{\geracao}{t}
+\newcommand{\indiv}[1]{\vet{c}^{(#1)}}
+\newcommand{\pcruz}{p_c}
+\newcommand{\pmut}{p_m}
+% sistemas nebulosos
+\newcommand{\fset}[1]{\tilde{#1}}
+\newcommand{\pert}[2]{\mu_{#1}\!\left(#2\right)}
+\newcommand{\tnorm}{\top}
+\newcommand{\snorm}{\bot}
+% realce e anotação
+\newcommand{\mdestaque}[2]{%
+  \setlength{\fboxsep}{3.5pt}%
+  \fcolorbox{#1}{#1!8}{$\displaystyle #2$}}
+\newcommand{\termo}[2]{%
+  \underbrace{#1}_{\mathclap{\text{\scriptsize\color{icCinza}#2}}}}
+
+%% ------------------------------------------------------------
+%% 7. ESTILOS E DIAGRAMAS TIKZ (idênticos aos do tema Beamer)
+%% ------------------------------------------------------------
+\tikzset{
+  neuronio/.style={circle, draw=icAzul, thick, fill=icAzul!12,
+    minimum size=0.85cm, inner sep=1pt, font=\small},
+  neuronio entrada/.style={neuronio, draw=icCiano, fill=icCiano!12},
+  neuronio saida/.style={neuronio, draw=icMagenta, fill=icMagenta!12},
+  neuronio destacado/.style={neuronio, draw=icDourado, fill=icDourado!18},
+  sinapse/.style={->, >={Stealth[length=5pt]}, icCinza!85, semithick},
+  sinapse destac/.style={->, >={Stealth[length=6pt]}, icMagenta, very thick},
+  peso/.style={fill=white, inner sep=1.5pt, font=\scriptsize, midway},
+  bloco/.style={draw=icAzul, thick, fill=icAzul!8, rounded corners=2pt,
+    align=center, minimum height=0.85cm, inner sep=6pt, font=\small},
+  bloco evol/.style={bloco, draw=icEvol, fill=icEvol!10},
+  bloco fuzzy/.style={bloco, draw=icFuzzy, fill=icFuzzy!10},
+  fluxo/.style={->, >={Stealth[length=6pt]}, thick, icCinza},
+}
+
+% ---------- \perceptron ---------------------------------------------------
+\newcommand{\perceptron}{%
+\begin{tikzpicture}
+  \node[neuronio entrada] (px1) at (0, 1.9)  {$x_1$};
+  \node[neuronio entrada] (px2) at (0, 0.95) {$x_2$};
+  \node                   (pxd) at (0, 0.18) {$\vdots$};
+  \node[neuronio entrada] (pxn) at (0,-0.75) {$x_N$};
+  \node[circle, draw=icCinza, fill=icFundo, minimum size=0.6cm,
+        font=\small] (pb) at (2.1, 2.15) {$1$};
+  \node[neuronio, minimum size=1cm] (psoma) at (2.1, 0.55) {$\Sigma$};
+  \node[neuronio, minimum size=1cm] (pativ) at (3.8, 0.55) {$\ativ(\cdot)$};
+  \node (pout) at (5.5, 0.55) {$\hat{y}$};
+  \draw[sinapse] (px1) -- node[peso, pos=0.45] {$w_1$} (psoma);
+  \draw[sinapse] (px2) -- node[peso, pos=0.45] {$w_2$} (psoma);
+  \draw[sinapse] (pxn) -- node[peso, pos=0.45] {$w_N$} (psoma);
+  \draw[sinapse] (pb)  -- node[peso, pos=0.45] {$b$}   (psoma);
+  \draw[sinapse] (psoma) -- node[peso, above] {$\campo$} (pativ);
+  \draw[sinapse destac] (pativ) -- (pout);
+\end{tikzpicture}}
+
+% ---------- \mlp{n1,n2,...} ------------------------------------------------
+\makeatletter
+\newcommand{\mlp}[1]{%
+\begin{tikzpicture}[x=1.7cm, y=0.85cm]
+  % conta as camadas
+  \xdef\ic@nlayers{0}%
+  \foreach \n in {#1} {\xdef\ic@nlayers{\the\numexpr\ic@nlayers+1\relax}}%
+  % nós
+  \foreach \n [count=\li] in {#1} {%
+    \pgfmathsetmacro{\ic@off}{(\n-1)/2}%
+    \ifnum\li=1
+      \foreach \j in {1,...,\n}
+        \node[neuronio entrada, minimum size=0.62cm]
+          (n-\li-\j) at (\li, {\ic@off-(\j-1)}) {};
+    \else
+      \ifnum\li=\ic@nlayers\relax
+        \foreach \j in {1,...,\n}
+          \node[neuronio saida, minimum size=0.62cm]
+            (n-\li-\j) at (\li, {\ic@off-(\j-1)}) {};
+      \else
+        \foreach \j in {1,...,\n}
+          \node[neuronio, minimum size=0.62cm]
+            (n-\li-\j) at (\li, {\ic@off-(\j-1)}) {};
+      \fi
+    \fi
+  }%
+  % arestas
+  \foreach \n [count=\li, remember=\n as \ic@nprev (initially 0),
+               remember=\li as \ic@lprev (initially 0)] in {#1} {%
+    \ifnum\li>1
+      \foreach \i in {1,...,\ic@nprev}
+        \foreach \j in {1,...,\n}
+          \draw[icCinza!60, semithick] (n-\ic@lprev-\i) -- (n-\li-\j);
+    \fi
+  }%
+\end{tikzpicture}}
+\makeatother
+
+% ---------- \cicloevolutivo --------------------------------------------------
+\newcommand{\cicloevolutivo}{%
+\begin{tikzpicture}[node distance=0.9cm and 1.5cm]
+  \node[bloco evol] (pop)  {População $\pop(\geracao)$};
+  \node[bloco evol, right=of pop]  (aval) {Avaliação\\ (aptidão $\apt$)};
+  \node[bloco evol, below=of aval] (sel)  {Seleção};
+  \node[bloco evol, left=of sel]   (var)  {Cruzamento $\pcruz$\\ Mutação $\pmut$};
+  \node[bloco, right=1.3cm of aval] (fim) {Critério de\\ parada};
+  \draw[fluxo] (pop)  -- (aval);
+  \draw[fluxo] (aval) -- (sel);
+  \draw[fluxo] (sel)  -- (var);
+  \draw[fluxo] (var)  -- (pop);
+  \draw[fluxo] (aval) -- (fim);
+\end{tikzpicture}}
+
+% ---------- \fuzzymf ----------------------------------------------------------
+\newcommand{\fuzzymf}{%
+\begin{tikzpicture}[x=1.1cm, y=1.4cm]
+  \draw[->, icCinza] (-0.2,0) -- (4.6,0) node[below] {$x$};
+  \draw[->, icCinza] (0,-0.05) -- (0,1.25) node[left] {$\pert{\fset{A}}{x}$};
+  \draw[icCinza!60] (-0.08,1) node[left, black!70] {\small $1$} -- (4.4,1);
+  \draw[thick, icCiano]   (0,1) -- (1.1,1) -- (2.2,0);
+  \draw[thick, icDourado] (1.1,0) -- (2.2,1) -- (3.3,0);
+  \draw[thick, icMagenta] (2.2,0) -- (3.3,1) -- (4.3,1);
+  \node[icCiano,   font=\small] at (0.55,1.12) {baixo};
+  \node[icDourado, font=\small] at (2.2,1.12)  {médio};
+  \node[icMagenta, font=\small] at (3.85,1.12) {alto};
+\end{tikzpicture}}
+
+\endinput
