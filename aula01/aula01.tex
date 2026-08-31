@@ -6,6 +6,9 @@
 %% adaptada: conexionismo, perceptron, portas lógicas, geometria
 %% da separabilidade, XOR, universalidade e o papel da
 %% profundidade. PyTorch desde o primeiro dia.
+%% Complementada com material do MIT 6.S191 (Amini, ed. 2026):
+%% círculos IA/AM/DL, por que agora, forma matricial, ativações,
+%% perda e paradigmas de aprendizado.
 %%
 %% Compilar:  latexmk -xelatex aula01.tex   (duas passadas!)
 %% ============================================================
@@ -18,6 +21,7 @@
 \usetheme{InteligenciaComputacional}   % ANTES do babel: fontspec vem primeiro
 \usepackage{babel}
 \babelprovide[import, main]{brazilian}
+\usepackage{booktabs}
 
 \title[Aula 1 — Introdução]{Aula 1: Introdução — redes neurais como aproximadores universais}
 \subtitle[GBC073 — Inteligência Computacional]{Conexionismo \textbullet\ Perceptron \textbullet\ Universalidade \textbullet\ O papel da profundidade}
@@ -93,6 +97,45 @@
 \end{frame}
 
 % ------------------------------------------------------------
+\begin{frame}{Três círculos concêntricos}
+  \framesubtitle{Onde o deep learning mora — e o que cada fronteira acrescenta}
+
+  \begin{columns}[T]
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \scalebox{0.8}{%
+        \begin{tikzpicture}
+          \fill[icNeural!12]    (0,0) circle (1.55);
+          \fill[icAzulClaro!18] (0,0) circle (1.05);
+          \fill[icMagenta!22]   (0,0) circle (0.55);
+          \draw[icNeural, very thick]    (0,0) circle (1.55);
+          \draw[icAzulClaro, very thick] (0,0) circle (1.05);
+          \draw[icMagenta, very thick]   (0,0) circle (0.55);
+          \node[font=\small, text=icNeural] at (0,1.28) {IA};
+          \node[font=\small, text=icAzulClaro] at (0,0.8) {AM};
+          \node[font=\small\bfseries, text=icMagenta] at (0,0) {DL};
+        \end{tikzpicture}}
+      \end{center}
+    \end{column}
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.35ex}
+        \item {\color{icNeural}\textbf{Inteligência artificial}} — qualquer
+              técnica que faça o computador imitar comportamento humano
+        \item {\color{icAzulClaro}\textbf{Aprendizado de máquina}} — a
+              habilidade de aprender sem ser explicitamente programado
+        \item {\color{icMagenta}\textbf{Aprendizado profundo}} — extrair
+              padrões dos dados brutos com redes de múltiplas camadas
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{ideiabox}
+    A frase-resumo: ensinar o computador a aprender a tarefa a partir de dados
+    brutos — em vez de receber a regra pronta.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
 \begin{frame}{O momento em que estamos}
   \framesubtitle{Este não é um curso de história — mas a história acabou de nos dar razão}
 
@@ -119,6 +162,46 @@
   \begin{alertabox}
     A receita é simples de enunciar e difícil de dominar. Este curso existe
     para você entender \emph{cada peça} — a ponto de implementá-la do zero.
+  \end{alertabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Por que só agora?}
+  \framesubtitle{As ideias centrais são dos anos 1950--1980; o que mudou foi a escala}
+
+  \begin{columns}[T]
+    \begin{column}{0.31\textwidth}
+      \begin{tcolorbox}[iccaixa=icNeural, title={1. Dados}]
+        \small Conjuntos maiores; coleta e armazenamento baratos.
+      \end{tcolorbox}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{tcolorbox}[iccaixa=icAzulClaro, title={2. Hardware}]
+        \small GPUs: a operação central — multiplicação de matrizes — é
+        massivamente paralelizável.
+      \end{tcolorbox}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{tcolorbox}[iccaixa=icMagenta, title={3. Software}]
+        \small Técnicas melhores, modelos novos, bibliotecas maduras.
+      \end{tcolorbox}
+    \end{column}
+  \end{columns}
+
+  \medskip
+  \begin{center}\small
+    {\color{icAzul}\textbf{1952}} gradiente descendente estocástico
+    \;\textbullet\;
+    {\color{icAzul}\textbf{1958}} perceptron com pesos aprendidos
+    \;\textbullet\;
+    {\color{icAzul}\textbf{1986}} retropropagação
+    \;\textbullet\;
+    {\color{icAzul}\textbf{1995}} redes convolucionais profundas
+  \end{center}
+
+  \begin{alertabox}
+    As ideias centrais desta aula são dos anos 1950--1980. O que mudou foi a
+    escala — e escala, aqui, muda o que é possível, não apenas o quão rápido.
   \end{alertabox}
 \end{frame}
 
@@ -325,6 +408,33 @@
     Geometria: \(\vw^{\!\top}\vx + b = 0\) é um \emph{hiperplano}; $\vw$ é a
     normal, $b$ desloca. O perceptron é um separador linear — e essa frase
     inteira já contém a sua limitação.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Do vetor ao lote: a forma matricial}
+  \framesubtitle{A mesma conta, de uma entrada por vez a um lote inteiro}
+
+  \[
+    \hat{y} = \ativ(w_0 + \vx^{\!\top}\vw)
+    \qquad\Longrightarrow\qquad
+    Z = XW + b, \qquad A = \ativ(Z)
+  \]
+
+  \begin{itemize}\setlength{\itemsep}{0.35ex}
+    \item O viés $w_0$ desloca a fronteira de decisão — sem ele, ela é
+          obrigada a passar pela origem
+    \item Com um lote de $B$ exemplos, a entrada vira uma matriz: $X$ é
+          $B{\times}m$, $W$ é $m{\times}1$ e a saída, $B{\times}1$ — o lote
+          atravessa a conta intocado
+    \item Tudo o que um perceptron faz é um produto interno seguido de uma
+          função escalar — exatamente a operação que as GPUs fazem bem
+  \end{itemize}
+
+  \begin{ideiabox}
+    Uma rede profunda é, em essência, uma pilha de multiplicações de matrizes
+    intercaladas com não linearidades. Erros de dimensão são a fonte número
+    um de bugs: as colunas da entrada casam com as linhas dos pesos — sempre.
   \end{ideiabox}
 \end{frame}
 
@@ -602,6 +712,103 @@ for epoca in range(10):
 \end{frame}
 
 % ------------------------------------------------------------
+\begin{frame}{Funções de ativação comuns}
+  \framesubtitle{Três suavizações do degrau — cada uma com sua derivada}
+
+  \begin{columns}[T]
+    \begin{column}{0.28\textwidth}
+      \begin{tcolorbox}[iccaixa=icCiano, title={Sigmoide}]
+        \small\[ \sig(z) = \frac{1}{1 + e^{-z}} \]
+        \footnotesize\[ \sig'(z) = \sig(z)\bigl(1 - \sig(z)\bigr) \]
+      \end{tcolorbox}
+    \end{column}
+    \begin{column}{0.28\textwidth}
+      \begin{tcolorbox}[iccaixa=icAzulClaro, title={Tangente hiperbólica}]
+        \small\[ \tanh(z) = \frac{e^{z} - e^{-z}}{e^{z} + e^{-z}} \]
+        \footnotesize\[ \tanh'(z) = 1 - \tanh^{2}(z) \]
+      \end{tcolorbox}
+    \end{column}
+    \begin{column}{0.28\textwidth}
+      \begin{tcolorbox}[iccaixa=icMagenta, title={ReLU}]
+        \small\[ \relu(z) = \max(0, z) \]
+        \footnotesize $\relu'(z)$: $1$ se $z > 0$; $0$ caso contrário
+      \end{tcolorbox}
+    \end{column}
+  \end{columns}
+
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item Todas são \alert{não lineares} — e é exatamente esse o ponto
+    \item Nas camadas ocultas de hoje, \alert{ReLU} é o padrão; na saída, a
+          ativação depende da tarefa
+  \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Para discutir em aula}
+  \begin{quizbox}
+    Uma rede de dez camadas com ativação identidade $g(z) = z$ tem o mesmo
+    poder expressivo de uma única camada linear, não importa quantos
+    neurônios cada camada tenha.
+
+    \smallskip
+    \opcoes{Verdadeiro \;/\; Falso}
+  \end{quizbox}
+
+  \pause
+
+  \begin{respbox}
+    \textbf{Verdadeiro.} Se $g$ é linear, a composição de camadas volta a ser
+    uma função linear: \(y = W_2(W_1\vx + b_1) + b_2 = (W_2W_1)\vx + (W_2b_1 + b_2)\).
+    Uma rede de 100 camadas teria o poder de uma só. A não linearidade é o que
+    permite a cada camada acrescentar \alert{representação de verdade}.
+  \end{respbox}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Propagação direta, passo a passo}
+  \framesubtitle{Rede $2{\to}2{\to}1$, ReLU na camada oculta, sigmoide na saída — um exemplo numérico completo}
+
+  \begin{columns}[T]
+    \begin{column}{0.38\textwidth}
+      \begin{center}
+        \scalebox{0.66}{\mlp{2,2,1}}
+      \end{center}
+      \small Entrada \(\vx = (1, 2)\); pesos e viés:
+      \[
+        W^{(1)} = \begin{psmallmatrix} 0{,}5 & -1{,}0\\ 1{,}5 & 0{,}5 \end{psmallmatrix},\;
+        b^{(1)} = (0, -1)
+      \]
+      \[
+        W^{(2)} = \begin{psmallmatrix} 1{,}0\\ 2{,}0 \end{psmallmatrix},\;
+        b^{(2)} = -2
+      \]
+    \end{column}
+    \begin{column}{0.58\textwidth}
+      \begin{center}\footnotesize
+      \begin{tabular}{@{}cll@{}}
+        \toprule
+        \textbf{Passo} & \textbf{Operação} & \textbf{Resultado}\\
+        \midrule
+        1 & \(\vet{z}^{(1)} = \vx W^{(1)} + b^{(1)}\) & \((3{,}5,\; -1{,}0)\)\\
+        2 & \(\vet{a}^{(1)} = \relu(\vet{z}^{(1)})\) & \((3{,}5,\; 0)\)\\
+        3 & \(z^{(2)} = \vet{a}^{(1)} W^{(2)} + b^{(2)}\) & \(1{,}5\)\\
+        4 & \(\hat{y} = \sig(z^{(2)})\) & \(0{,}8176\)\\
+        \bottomrule
+      \end{tabular}
+      \end{center}
+      \small Confira: \(3{,}5 = 1(0{,}5) + 2(1{,}5) + 0\) e
+      \(\hat y = 1/(1 + e^{-1{,}5})\).
+    \end{column}
+  \end{columns}
+
+  \begin{alertabox}
+    Repare no passo 2: a ReLU zerou a segunda unidade oculta. Para esta
+    entrada ela não contribui em nada — e, na retropropagação, não receberá
+    gradiente. É assim que a ReLU produz \alert{ativações esparsas}.
+  \end{alertabox}
+\end{frame}
+
+% ------------------------------------------------------------
 \begin{frame}{Do booleano ao contínuo}
   \begin{columns}[T]
     \begin{column}{0.5\textwidth}
@@ -626,6 +833,33 @@ for epoca in range(10):
     \end{column}
   \end{columns}
 
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{A hierarquia que emerge sozinha}
+  \framesubtitle{Ninguém programou ``detecte uma borda'' — a rede organizou-se assim durante o treino}
+
+  \begin{center}
+    \begin{tikzpicture}[node distance=1.1cm and 1.4cm]
+      \node[bloco, minimum height=1.15cm] (baixo) {Baixo nível\\ linhas e bordas};
+      \node[bloco, right=of baixo, minimum height=1.15cm] (medio) {Nível médio\\ olhos, nariz, orelhas};
+      \node[bloco, right=of medio, minimum height=1.15cm] (alto) {Alto nível\\ estrutura facial};
+      \draw[fluxo] (baixo) -- (medio);
+      \draw[fluxo] (medio) -- (alto);
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{itemize}\setlength{\itemsep}{0.3ex}
+    \item Em reconhecimento facial, cada camada aprende um nível de abstração
+    \item A hierarquia \emph{emerge} do treinamento — é isso que a palavra
+          ``profundo'' compra
+  \end{itemize}
+
+  \begin{ideiabox}
+    É a versão grande do XOR: lá, a camada oculta construiu ``algum ligado''
+    e ``ambos ligados''; aqui, constrói bordas, partes e rostos. O mecanismo
+    é o mesmo — muda a escala.
+  \end{ideiabox}
 \end{frame}
 
 % ------------------------------------------------------------
@@ -686,6 +920,39 @@ for epoca in range(10):
 \section{O que vem pela frente}
 
 % ------------------------------------------------------------
+\begin{frame}{A ativação de saída define a tarefa}
+  \framesubtitle{Nas camadas ocultas, ReLU; na última camada, a escolha importa}
+
+  \begin{center}\scriptsize
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Tarefa} & \textbf{Ativação de saída} & \textbf{Interpretação}\\
+    \midrule
+    Regressão & nenhuma (linear) & valor real, sem restrição\\
+    Classificação binária & sigmoide, 1 saída & $P(y = 1 \mid \vx)$\\
+    Classificação multiclasse & softmax, $K$ saídas & distribuição sobre $K$ classes\\
+    Multirrótulo & sigmoide, $K$ saídas & $K$ probabilidades independentes\\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{-0.5em}
+  \begin{defbox}{Softmax}
+    \[
+      \soft(\vet{z})_i = \frac{e^{z_i}}{\sum_{j=1}^{K} e^{z_j}}
+      \qquad\Longrightarrow\qquad
+      \sum_{i=1}^{K} \soft(\vet{z})_i = 1
+    \]
+  \end{defbox}
+
+  \vspace{-0.5em}
+  \begin{ideiabox}
+    A sigmoide age em cada saída isoladamente; o softmax \emph{acopla} as
+    saídas — subir uma classe baixa as outras.
+  \end{ideiabox}
+\end{frame}
+
+% ------------------------------------------------------------
 \begin{frame}[fragile]{Prévia: o XOR treinado por gradiente}
   \framesubtitle{O que a regra do perceptron não conseguiu, o gradiente resolve em 15 linhas}
 
@@ -711,6 +978,39 @@ for passo in range(5000):
     \item Repare: degrau $\to$ \texttt{Tanh}/\texttt{Sigmoid}. Sem
           suavidade não há derivada; sem derivada não há \texttt{backward()}
   \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{A perda: medindo o erro}
+  \framesubtitle{O que a \texttt{BCELoss} da prévia faz — e por que ela, e não o erro quadrático}
+
+  \begin{defbox}{Perda empírica $J(\vw)$}
+    \small \(J(\vw) = \frac{1}{n}\sum_{i=1}^{n}
+    L\bigl(f(\vx^{(i)}; \vw),\, y^{(i)}\bigr)\) — função objetivo, custo ou
+    risco empírico; treinar é procurar \(\argmin_{\vw} J(\vw)\).
+  \end{defbox}
+
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{tcolorbox}[iccaixa=icCiano, title={Entropia cruzada binária}]
+        \footnotesize Classificação: a saída é uma probabilidade.
+        \footnotesize\[ J = -\tfrac{1}{n}\sum_{i}
+           \bigl[y_i\log \hat y_i + (1-y_i)\log(1-\hat y_i)\bigr] \]
+      \end{tcolorbox}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{tcolorbox}[iccaixa=icAzulClaro, title={Erro quadrático médio}]
+        \footnotesize Regressão: a saída é um real contínuo.
+        \footnotesize\[ J = \tfrac{1}{n}\sum_{i} \bigl(y_i - \hat y_i\bigr)^{2} \]
+      \end{tcolorbox}
+    \end{column}
+  \end{columns}
+
+  \begin{alertabox}
+    EQM + sigmoide carrega $\sig'(z)$ no gradiente, que some quando o modelo
+    está confiante e errado; a BCE cancela o $\sig'$ e sobra o erro
+    $y - \hat y$.
+  \end{alertabox}
 \end{frame}
 
 % ------------------------------------------------------------
@@ -769,6 +1069,31 @@ for passo in range(5000):
     \item Ao final, você deve saber ler um artigo atual de deep learning —
           e reproduzi-lo
   \end{itemize}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Os paradigmas de aprendizado}
+  \framesubtitle{A mesma rede e o mesmo gradiente — o que muda é de onde vem o sinal}
+
+  \begin{center}\footnotesize
+  \begin{tabular}{@{}lp{4.1cm}p{4.1cm}@{}}
+    \toprule
+    \textbf{Paradigma} & \textbf{Sinal de aprendizado} & \textbf{Exemplo de uso}\\
+    \midrule
+    Supervisionado & rótulo correto por exemplo & diagnóstico por imagem\\
+    Não supervisionado & nenhum rótulo & segmentação de clientes\\
+    Auto-supervisionado & rótulo derivado do próprio dado & pré-treino de modelos de linguagem\\
+    Por reforço & recompensa escalar, possivelmente atrasada & jogos, robótica\\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \begin{ideiabox}
+    Nas quatro linhas da tabela, a rede é a mesma e o gradiente é calculado
+    por retropropagação. Um modelo de linguagem moderno usa três delas em
+    sequência: pré-treino auto-supervisionado, ajuste supervisionado e
+    alinhamento por reforço (tema da disciplina GBC063).
+  \end{ideiabox}
 \end{frame}
 
 % ------------------------------------------------------------
@@ -854,6 +1179,9 @@ for passo in range(5000):
               prediction with AlphaFold. \emph{Nature} 596.
         \item Raj, B. \emph{11-785 Introduction to Deep Learning}, CMU
               (S26), Lecs.\ 1--2 — \texttt{deeplearning.cs.cmu.edu}
+        \item Amini, A.; Amini, A. \emph{MIT 6.S191: Introduction to Deep
+              Learning} (2026), \texttt{introtodeeplearning.com} — base
+              complementar desta aula.
       \end{itemize}}
     \end{column}
   \end{columns}
