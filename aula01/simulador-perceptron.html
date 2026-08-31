@@ -119,6 +119,9 @@
   footer ul{margin:.2rem 0 .9rem; padding-left:1.1rem; font-size:.88rem}
   footer li{margin:.18rem 0}
   .citacoes li{color:#333}
+  .citacoes a{color:var(--azul); text-decoration:underline; text-underline-offset:2px}
+  .citacoes a:hover{color:var(--magenta)}
+  .citacoes a:visited{color:#3F6DC4}
   .assinatura{font-size:.8rem; color:var(--cinza); margin-top:.6rem;
               border-top:1px solid #e6eaf4; padding-top:.6rem}
   /* ============ sistema de ajuda "?" (mesmo estilo da Aula 2) ============ */
@@ -164,7 +167,8 @@
   <div class="rotulo">GBC073 · Inteligência Computacional · Aula 1</div>
   <h1>Playground do Perceptron</h1>
   <p>Arraste os pontos, escolha uma porta lógica e observe a reta de decisão
-     obedecer à regra de 1958 — até o dia em que ela não consegue mais.
+     obedecer à regra de 1958 — até o dia em que ela não consegue mais. Troque
+     a ativação para a <b>sigmoide</b> e veja a regra delta suavizar a fronteira.
      Os botões <span class="ajuda" style="cursor:default" aria-hidden="true">?</span>
      explicam cada equação, parâmetro, opção e mensagem do painel.</p>
 </header>
@@ -206,15 +210,20 @@
     </div>
 
     <div>
-      <h2>Modelo e regra (Rosenblatt, 1958)
+      <h2>Modelo e regra
           <button class="ajuda" data-ajuda="d-modelo"
           aria-label="Ajuda: modelo e regra de aprendizado">?</button></h2>
-      <div class="modelo" aria-label="Equações do perceptron">
-        <span>v = w·x + b = w₁x₁ + w₂x₂ + b</span>
-        <span>ŷ = φ(v) = 1 se v ≥ 0, senão 0</span>
-        <span class="regra">w ← w + η·(y − ŷ)·x</span>
-        <span>b ← b + η·(y − ŷ)</span>
+      <div style="display:flex; align-items:center; gap:.45rem; margin:.55rem 0 .5rem">
+        <span style="font-size:.78rem; color:var(--cinza); font-weight:600">ativação</span>
+        <button class="ajuda" data-ajuda="d-ativacao"
+            aria-label="Ajuda: funções de ativação">?</button>
+        <div class="chips" role="group" aria-label="Função de ativação"
+             style="margin-left:auto">
+          <button class="chip" id="ativDegrau" aria-pressed="true">degrau</button>
+          <button class="chip" id="ativSigmoide" aria-pressed="false">sigmoide</button>
+        </div>
       </div>
+      <div class="modelo" id="eqs" aria-label="Equações do perceptron"></div>
     </div>
 
     <div>
@@ -269,23 +278,45 @@
           porque nenhuma reta separa as duas classes.</li>
       <li>Aumente η e veja os saltos ficarem maiores; diminua e veja a
           convergência ficar mais fina (e mais lenta).</li>
+      <li>Troque para <b>sigmoide</b>: a fronteira vira uma faixa suave que
+          afina conforme os pesos crescem, e a regra delta continua ajustando
+          mesmo com tudo classificado certo — até os passos ficarem
+          desprezíveis.</li>
     </ul>
     <h2>Referências</h2>
     <ul class="citacoes">
-      <li>Rosenblatt, F. (1958). The perceptron: a probabilistic model for
-          information storage and organization in the brain.
-          <i>Psychological Review</i>, 65(6). — a regra implementada aqui.</li>
-      <li>Novikoff, A. (1962). On convergence proofs on perceptrons.
+      <li>Rosenblatt, F. (1958). <a
+          href="https://doi.org/10.1037/h0042519" target="_blank" rel="noopener">The
+          perceptron: a probabilistic model for information storage and
+          organization in the brain</a>. <i>Psychological Review</i>, 65(6). — a
+          regra implementada aqui.</li>
+      <li>Novikoff, A. (1962). <a
+          href="https://apps.dtic.mil/sti/pdfs/AD0283882.pdf" target="_blank"
+          rel="noopener">On convergence proofs on perceptrons</a> (PDF).
           <i>Symposium on the Mathematical Theory of Automata</i>. — por que
           E e OU convergem em tempo finito.</li>
-      <li>Minsky, M.; Papert, S. (1969). <i>Perceptrons</i>. MIT Press. —
-          por que o XOR não converge nunca.</li>
+      <li>Minsky, M.; Papert, S. (1969). <a
+          href="https://direct.mit.edu/books/oa-monograph/4704/PerceptronsAn-Introduction-to-Computational-Geometry"
+          target="_blank" rel="noopener"><i>Perceptrons</i></a> (ed. 2017, acesso
+          aberto). MIT Press. — por que o XOR não converge nunca.</li>
+      <li>Widrow, B.; Hoff, M. E. (1960). <a
+          href="https://lucidar.me/en/neural-networks/files/1960-adaptive-switching-circuits.pdf"
+          target="_blank" rel="noopener">Adaptive switching circuits</a> (PDF).
+          <i>1960 IRE WESCON Convention Record</i>. — a regra delta (LMS), base
+          do modo sigmoide.</li>
+      <li>Rumelhart, D.; Hinton, G.; Williams, R. (1986). <a
+          href="https://doi.org/10.1038/323533a0" target="_blank"
+          rel="noopener">Learning representations by back-propagating errors</a>.
+          <i>Nature</i>, 323. — a regra delta generalizada com a sigmoide.</li>
       <li>Raj, B. <i>11-785 Introduction to Deep Learning</i>, CMU (S26),
-          Lectures 1–2 — deeplearning.cs.cmu.edu. — a apresentação que esta
-          aula segue.</li>
-      <li>McCulloch, W.; Pitts, W. (1943). A logical calculus of the ideas
-          immanent in nervous activity. <i>Bulletin of Mathematical
-          Biophysics</i>, 5. — o neurônio de limiar.</li>
+          Lectures 1–2 — <a href="https://deeplearning.cs.cmu.edu/"
+          target="_blank" rel="noopener">deeplearning.cs.cmu.edu</a>. — a
+          apresentação que esta aula segue.</li>
+      <li>McCulloch, W.; Pitts, W. (1943). <a
+          href="https://doi.org/10.1007/BF02478259" target="_blank"
+          rel="noopener">A logical calculus of the ideas immanent in nervous
+          activity</a>. <i>Bulletin of Mathematical Biophysics</i>, 5. — o
+          neurônio de limiar.</li>
     </ul>
     <div class="assinatura">
       GBC073 — Inteligência Computacional · Prof. Marcelo Keese Albertini ·
@@ -330,6 +361,8 @@ let pontos = [];                 // {x1, x2, y}
 let w1=0, w2=0, b=0;             // pesos reais
 let d1=0, d2=0, db=0;            // pesos desenhados (suavizados)
 let eta = 0.5;
+let ativacao = 'degrau';         // 'degrau' (Rosenblatt) | 'sigmoide' (regra delta)
+let maxDeltaEpoca = 0;           // maior |Δ| numa época (critério da sigmoide)
 let idx = 0;                     // próximo exemplo
 let epoca = 0, atualizacoes = 0, atualizacoesEpoca = 0, errosUltimaEpoca = null;
 let convergiu = false;
@@ -364,6 +397,7 @@ function mundoY(p){ const w=tela.clientWidth;
 
 /* ================= perceptron ================= */
 const degrau = v => v >= 0 ? 1 : 0;
+const sigmoide = v => 1/(1+Math.exp(-v));
 function classifica(p, a=w1, c=w2, d=b){ return degrau(a*p.x1 + c*p.x2 + d); }
 function errosAtuais(){ return pontos.filter(p => classifica(p)!==p.y).length; }
 
@@ -379,25 +413,36 @@ function subPasso(){
   } else if (fase===1){
     atual.v = w1*atual.p.x1 + w2*atual.p.x2 + b;  fase=2;
   } else if (fase===2){
-    atual.yhat = degrau(atual.v);  fase=3;
+    atual.yhat = (ativacao==='sigmoide') ? sigmoide(atual.v) : degrau(atual.v);
+    atual.deriv = (ativacao==='sigmoide') ? atual.yhat*(1-atual.yhat) : 1;
+    fase=3;
   } else if (fase===3){
     atual.erro = atual.p.y - atual.yhat;  fase=4;
   } else { // fase 4: atualizar (ou não) e fechar o exemplo
     if (atual.erro !== 0){
       trilha.push({w1,w2,b});
       if (trilha.length>TRILHA_MAX) trilha.shift();
-      atual.dw1 = eta*atual.erro*atual.p.x1;
-      atual.dw2 = eta*atual.erro*atual.p.x2;
-      atual.dbv = eta*atual.erro;
+      const g = atual.deriv;             // 1 no degrau; σ′(v) na sigmoide
+      atual.dw1 = eta*atual.erro*g*atual.p.x1;
+      atual.dw2 = eta*atual.erro*g*atual.p.x2;
+      atual.dbv = eta*atual.erro*g;
       w1+=atual.dw1; w2+=atual.dw2; b+=atual.dbv;
       atualizacoes++; atualizacoesEpoca++;
+      maxDeltaEpoca = Math.max(maxDeltaEpoca,
+        Math.abs(atual.dw1), Math.abs(atual.dw2), Math.abs(atual.dbv));
     } else { atual.dw1=atual.dw2=atual.dbv=0; }
     atual.fechado = true;
     idx = (idx+1) % pontos.length;
     if (idx===0){ // fechou uma época
       errosUltimaEpoca = errosAtuais();
-      if (atualizacoesEpoca===0){ convergiu = true; rodando = false; }
-      else { epoca++; atualizacoesEpoca = 0; }
+      if (ativacao==='degrau'){
+        if (atualizacoesEpoca===0){ convergiu = true; rodando = false; }
+        else { epoca++; atualizacoesEpoca = 0; }
+      } else { // regra delta: convergência assintótica
+        if (errosUltimaEpoca===0 && maxDeltaEpoca < 5e-2){
+          convergiu = true; rodando = false;
+        } else { epoca++; atualizacoesEpoca = 0; maxDeltaEpoca = 0; }
+      }
     }
     fase=0;
   }
@@ -410,7 +455,7 @@ function passo(){ // completa o exemplo corrente, fase a fase
 function umaEpoca(){ const n = pontos.length; for(let k=0;k<n && !convergiu;k++) passo(); }
 function reiniciaPesos(){
   w1=w2=b=0; if(reduzMovimento){d1=d2=db=0;}
-  idx=0; epoca=0; atualizacoes=0; atualizacoesEpoca=0;
+  idx=0; epoca=0; atualizacoes=0; atualizacoesEpoca=0; maxDeltaEpoca=0;
   errosUltimaEpoca=null; convergiu=false; trilha=[]; fase=0; atual=null;
   atualizaPainel();
 }
@@ -426,6 +471,28 @@ function viraLivre(){ // muda só o chip, mantendo os pontos editados
   document.querySelectorAll('.chip[data-preset]').forEach(c =>
     c.setAttribute('aria-pressed', c.dataset.preset==='LIVRE' ? 'true':'false'));
 }
+function renderEquacoes(){
+  const eqs = document.getElementById('eqs');
+  eqs.innerHTML = (ativacao==='degrau')
+    ? `<span>v = w·x + b = w₁x₁ + w₂x₂ + b</span>
+       <span>ŷ = φ(v) = 1 se v ≥ 0, senão 0</span>
+       <span class="regra">w ← w + η·(y − ŷ)·x</span>
+       <span>b ← b + η·(y − ŷ)</span>`
+    : `<span>v = w·x + b = w₁x₁ + w₂x₂ + b</span>
+       <span>ŷ = σ(v) = 1/(1+e^(−v))  ·  σ′(v) = ŷ·(1−ŷ)</span>
+       <span class="regra">w ← w + η·(y − ŷ)·σ′(v)·x</span>
+       <span>b ← b + η·(y − ŷ)·σ′(v)</span>`;
+}
+function defineAtivacao(nome){
+  ativacao = nome;
+  document.getElementById('ativDegrau').setAttribute('aria-pressed',
+    ativacao==='degrau' ? 'true':'false');
+  document.getElementById('ativSigmoide').setAttribute('aria-pressed',
+    ativacao==='sigmoide' ? 'true':'false');
+  rodando = false;
+  renderEquacoes();
+  reiniciaPesos();
+}
 
 /* ================= desenho ================= */
 function desenhaMeiaPlano(a,c,d,cor){
@@ -440,6 +507,23 @@ function desenhaMeiaPlano(a,c,d,cor){
   ctx.lineTo(px(p0x-dx*L+nx*L), py(p0y-dy*L+ny*L));
   ctx.lineTo(px(p0x+dx*L+nx*L), py(p0y+dy*L+ny*L));
   ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function desenhaPlanoSuave(a,c,d){ // faixa de "confiança" σ(v) da sigmoide
+  const n=Math.hypot(a,c); if (n<1e-9) return;
+  const nx=a/n, ny=c/n, p0x=-d*nx/n, p0y=-d*ny/n;
+  const L=3.0;                          // meia-largura do gradiente (mundo)
+  // ponto onde σ = 0,9 (v = ln 9 ≈ 2,197); a faixa afina quando |w| cresce
+  const delta = Math.min(0.45, Math.max(0.03, 2.197/(2*L*n)));
+  const g = ctx.createLinearGradient(
+    px(p0x-nx*L), py(p0y-ny*L), px(p0x+nx*L), py(p0y+ny*L));
+  g.addColorStop(0,        'rgba(13,138,153,0.26)');  // ciano: σ ≈ 0
+  g.addColorStop(0.5-delta,'rgba(13,138,153,0.10)');
+  g.addColorStop(0.5,      'rgba(255,255,255,0)');    // fronteira σ = 0,5
+  g.addColorStop(0.5+delta,'rgba(209,46,110,0.10)');
+  g.addColorStop(1,        'rgba(209,46,110,0.26)');  // magenta: σ ≈ 1
+  ctx.save(); ctx.fillStyle=g;
+  ctx.fillRect(0,0,tela.clientWidth,tela.clientWidth);
+  ctx.restore();
 }
 function desenhaReta(a,c,d,cor,esp,alfa){
   const n=Math.hypot(a,c); if (n<1e-9) return;
@@ -475,8 +559,11 @@ function desenha(tempo){
   ctx.clearRect(0,0,w,w);
   // fundo e sombreado das regiões
   ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,w);
-  desenhaMeiaPlano( d1, d2, db, C.magenta);   // lado ŷ = 1
-  desenhaMeiaPlano(-d1,-d2,-db, C.ciano);     // lado ŷ = 0
+  if (ativacao==='sigmoide'){ desenhaPlanoSuave(d1, d2, db); }   // faixa σ(v)
+  else {
+    desenhaMeiaPlano( d1, d2, db, C.magenta); // lado ŷ = 1
+    desenhaMeiaPlano(-d1,-d2,-db, C.ciano);   // lado ŷ = 0
+  }
   // grade
   ctx.strokeStyle='#e6eaf4'; ctx.lineWidth=1;
   for(let v=-0.5; v<=1.5001; v+=0.5){
@@ -551,12 +638,23 @@ function atualizaPainel(){
   st.classList.remove('rodando','convergiu','oscilando');
   if (convergiu){
     st.classList.add('convergiu');
-    st.textContent = `Convergiu após ${atualizacoes} atualizações — os dados são `+
-      `linearmente separáveis (Novikoff, 1962).`;
-  } else if (epoca >= 25){
+    st.textContent = (ativacao==='degrau')
+      ? `Convergiu após ${atualizacoes} atualizações — os dados são `+
+        `linearmente separáveis (Novikoff, 1962).`
+      : `Convergiu (regra delta) após ${atualizacoes} atualizações — todos os `+
+        `pontos certos e os passos ficaram desprezíveis (convergência assintótica).`;
+  } else if (ativacao==='sigmoide' && nerr===0 && rodando){
+    st.classList.add('rodando');
+    st.textContent = `Todos os pontos certos — a regra delta ainda refina os `+
+      `pesos: os passos vão encolhendo até ficarem desprezíveis.`;
+  } else if (epoca >= (ativacao==='sigmoide' ? 60 : 25)){
     st.classList.add('oscilando');
-    st.textContent = `${epoca} épocas sem convergir — estes dados não são `+
-      `linearmente separáveis (Minsky & Papert, 1969). A regra vai oscilar para sempre.`;
+    st.textContent = (ativacao==='degrau')
+      ? `${epoca} épocas sem convergir — estes dados não são `+
+        `linearmente separáveis (Minsky & Papert, 1969). A regra vai oscilar para sempre.`
+      : `${epoca} épocas e o erro ainda não zerou — a regra delta segue ajustando; `+
+        `se os dados não forem separáveis (XOR), a reta se acomoda no melhor ajuste `+
+        `(mínimos quadrados) e o erro fica positivo para sempre.`;
   } else if (rodando){
     st.classList.add('rodando');
     st.textContent = `Treinando… época ${epoca}, ${atualizacoes} atualizações.`;
@@ -571,6 +669,7 @@ function renderFases(){
   const alvo = document.getElementById('fases');
   const u = atual, f = fase;
   // textos simbólicos (antes) e numéricos (depois de cada fase)
+  const sig = ativacao==='sigmoide';
   const linhas = [
     { t:'1 · observar o exemplo',
       sim:'x = (x₁, x₂),  y = classe',
@@ -581,22 +680,27 @@ function renderFases(){
       num: u && u.v!==undefined ?
         `v = ${n2(u.w1a)}·${n1(u.p.x1)} + ${n2(u.w2a)}·${n1(u.p.x2)} + ${n2(u.ba)} = ${n2(u.v)}` : null,
       ok: f>=2 || (u && u.fechado) },
-    { t:'3 · ativação (degrau)',
-      sim:'ŷ = φ(v) = 1 se v ≥ 0, senão 0',
+    { t: sig ? '3 · ativação (sigmoide)' : '3 · ativação (degrau)',
+      sim: sig ? 'ŷ = σ(v) = 1/(1+e^(−v))' : 'ŷ = φ(v) = 1 se v ≥ 0, senão 0',
       num: u && u.yhat!==undefined ?
-        `ŷ = φ(${n2(u.v)}) = ${u.yhat}` : null,
+        (sig ? `ŷ = σ(${n2(u.v)}) = ${n2(u.yhat)}` : `ŷ = φ(${n2(u.v)}) = ${u.yhat}`) : null,
       ok: f>=3 || (u && u.fechado) },
     { t:'4 · erro',
       sim:'e = y − ŷ',
       num: u && u.erro!==undefined ?
-        `e = ${u.p.y} − ${u.yhat} = ${u.erro>0?'+':''}${u.erro}` : null,
+        (sig
+          ? `e = ${u.p.y} − ${n2(u.yhat)} = ${u.erro>=0?'+':''}${n2(u.erro)}   σ′(v) = ${n2(u.deriv)}`
+          : `e = ${u.p.y} − ${u.yhat} = ${u.erro>0?'+':''}${u.erro}`) : null,
       ok: f>=4 || (u && u.fechado) },
     { t:'5 · atualização',
-      sim:'w ← w + η·e·x,   b ← b + η·e',
+      sim: sig ? 'w ← w + η·σ′(v)·e·x,   b ← b + η·σ′(v)·e'
+               : 'w ← w + η·e·x,   b ← b + η·e',
       num: u && u.fechado ?
         (u.erro===0
           ? 'e = 0 → acertou, nada a atualizar'
-          : `Δw = ${n2(u.eta)}·(${u.erro})·x = (${fmt(u.dw1)}, ${fmt(u.dw2)})\nΔb = ${fmt(u.dbv)}  →  w = (${fmt(w1)}, ${fmt(w2)}),  b = ${fmt(b)}`)
+          : (sig
+              ? `Δw = ${n2(u.eta)}·${n2(u.deriv)}·(${u.erro>=0?'+':''}${n2(u.erro)})·x = (${fmt(u.dw1)}, ${fmt(u.dw2)})\nΔb = ${fmt(u.dbv)}  →  w = (${fmt(w1)}, ${fmt(w2)}),  b = ${fmt(b)}`
+              : `Δw = ${n2(u.eta)}·(${u.erro})·x = (${fmt(u.dw1)}, ${fmt(u.dw2)})\nΔb = ${fmt(u.dbv)}  →  w = (${fmt(w1)}, ${fmt(w2)}),  b = ${fmt(b)}`))
         : null,
       ok: u && u.fechado,
       pulou: u && u.fechado && u.erro===0 }
@@ -633,19 +737,42 @@ const AJUDA = {
         <b>clique no plano</b> para adicioná-lo. Clique de novo no botão para desarmar.</li>
   </ul>
   <p>Qualquer edição muda o preset para <b>Livre</b> e reinicia os pesos.</p>`},
-'d-modelo':{t:'O modelo: campo local, degrau e a regra de Rosenblatt', html:`
+'d-modelo':{t:'O modelo: campo local, degrau, sigmoide e as regras de aprendizado', html:`
   <p>O perceptron de Rosenblatt (1958) combina as entradas com pesos e um viés:</p>
   <span class="eq">v = w·x + b = w₁x₁ + w₂x₂ + b</span>
-  <p>O degrau decide a classe:</p>
+  <p>A <b>função de ativação</b> decide a classe. No modo <b>degrau</b> (Rosenblatt):</p>
   <span class="eq">ŷ = φ(v) = 1 se v ≥ 0, senão 0</span>
-  <p>A fronteira v = 0 é uma <b>reta</b>: o lado ŷ = 1 fica sombreado de magenta e o
-  lado ŷ = 0 de ciano. O vetor (w₁, w₂) é perpendicular à reta e aponta para o lado
-  ŷ = 1 (a seta azul); o viés <b>b</b> desloca a reta sem girá-la.</p>
+  <p>No modo <b>sigmoide</b> (regra delta), a saída é contínua:</p>
+  <span class="eq">ŷ = σ(v) = 1/(1+e^(−v))  e  σ′(v) = ŷ·(1−ŷ)</span>
+  <p>A fronteira v = 0 é uma <b>reta</b> nos dois modos: o lado ŷ = 1 fica sombreado de
+  magenta e o lado ŷ = 0 de ciano (na sigmoide, o sombreado vira uma faixa suave que
+  afina quando os pesos crescem). O vetor (w₁, w₂) é perpendicular à reta e aponta para
+  o lado ŷ = 1 (a seta azul); o viés <b>b</b> desloca a reta sem girá-la.</p>
   <p>Quando o exemplo é classificado errado, a regra empurra os pesos na direção dele:</p>
-  <span class="eq">w ← w + η·(y − ŷ)·x</span>
-  <span class="eq">b ← b + η·(y − ŷ)</span>
-  <p>Acertou (y − ŷ = 0): nada muda. Errou: cada peso anda η·(y−ŷ)·xᵢ — aproximando a
-  reta do ponto errado.</p>`},
+  <span class="eq">degrau:   w ← w + η·(y − ŷ)·x</span>
+  <span class="eq">sigmoide: w ← w + η·(y − ŷ)·σ′(v)·x</span>
+  <p>Acertou (y − ŷ = 0): nada muda. Errou: cada peso anda η·(y−ŷ)·xᵢ (degrau) ou
+  η·(y−ŷ)·σ′(v)·xᵢ (sigmoide) — aproximando a reta do ponto errado. Na sigmoide, o fator
+  σ′(v) ≈ 0 perto dos extremos: exemplos já bem resolvidos movem pouco os pesos.</p>`},
+'d-ativacao':{t:'Ativação: degrau (Rosenblatt, 1958) ou sigmoide (regra delta)', html:`
+  <p>O seletor troca a função de ativação — e, com ela, a regra de aprendizado:</p>
+  <ul>
+    <li><b>degrau</b> — a regra original de Rosenblatt (1958): o erro só pode ser 0,
+        +1 ou −1 e os pesos só mudam quando há erro de classificação. Convergência
+        exata em tempo finito para dados linearmente separáveis (Novikoff, 1962);
+        no XOR, oscila para sempre.</li>
+    <li><b>sigmoide</b> — a <b>regra delta</b> (Widrow &amp; Hoff, 1960; generalizada
+        por Rumelhart et al., 1986): a saída é contínua em (0,1), o erro
+        e = y − ŷ é um número real e cada atualização é ponderada por σ′(v) = ŷ(1−ŷ):
+        <span class="eq">w ← w + η·(y − ŷ)·σ′(v)·x</span>
+        Todo exemplo move os pesos um pouco, mesmo sem erro de classificação; a
+        convergência é assintótica (os passos encolhem) e o critério de parada é:
+        todos os pontos certos <i>e</i> passos desprezíveis (|Δ| &lt; 0,05 numa época).</li>
+  </ul>
+  <p>Na sigmoide, o sombreado do plano vira uma <b>faixa suave</b>: branca na fronteira
+  (σ = 0,5) e colorida conforme a "confiança" σ(v) — quanto maiores os pesos, mais
+  estreita e nítida a faixa. A reta de decisão (v = 0) é a mesma nos dois modos.</p>
+  <p>Trocar de ativação zera os pesos e o histórico de fantasmas.</p>`},
 'd-treino':{t:'Treino: passos, η e velocidade', html:`
   <ul>
     <li><b>Executar / Pausar</b> — roda o treino em loop; cada passo processa um
@@ -671,8 +798,9 @@ const AJUDA = {
     <li><b>erros agora</b> — quantos pontos estão do lado errado da reta atual.</li>
   </ul>
   <p>A faixa de status no topo do plano muda de cor conforme o estado: <b>verde</b> =
-  convergiu (todos os pontos certos; o treino congela), <b>carmim</b> = oscilando
-  (dados não linearmente separáveis; a regra nunca para), <b>azul</b> = treinando,
+  convergiu (no degrau: todos os pontos certos; na sigmoide: todos certos <i>e</i>
+  passos desprezíveis — a reta congela nos dois casos), <b>carmim</b> = oscilando
+  (dados não linearmente separáveis; a regra nunca zera o erro), <b>azul</b> = treinando,
   <b>cinza</b> = pausado.</p>`},
 'd-fases':{t:'Passo a passo: as 5 fases de cada exemplo', html:`
   <p>Cada exemplo percorre cinco fases; use <b>Sub-passo</b> para vê-las uma a uma —
@@ -680,10 +808,13 @@ const AJUDA = {
   <ol>
     <li><b>Observar</b> — qual ponto é o exemplo da vez (halo dourado no plano).</li>
     <li><b>Campo local</b> — v = w₁x₁ + w₂x₂ + b.</li>
-    <li><b>Ativação</b> — ŷ = φ(v): 1 se v ≥ 0, senão 0.</li>
-    <li><b>Erro</b> — e = y − ŷ: +1, −1 ou 0.</li>
-    <li><b>Atualização</b> — se e ≠ 0, os pesos andam η·e·x e o viés η·e; se e = 0,
-        nada muda e a fase fica marcada como pulada.</li>
+    <li><b>Ativação</b> — no degrau, ŷ = φ(v): 1 se v ≥ 0, senão 0; na sigmoide,
+        ŷ = σ(v), um número contínuo em (0,1).</li>
+    <li><b>Erro</b> — e = y − ŷ (no degrau: +1, −1 ou 0; na sigmoide: um número real,
+        e o painel mostra também σ′(v)).</li>
+    <li><b>Atualização</b> — se e ≠ 0, os pesos andam η·e·x e o viés η·e (degrau) ou
+        η·σ′(v)·e·x e η·σ′(v)·e (sigmoide); se e = 0, nada muda e a fase fica marcada
+        como pulada.</li>
   </ol>
   <p>Fases concluídas ficam destacadas; a próxima fica com fundo dourado.</p>`},
 'd-observar':{t:'O que observar (e como ler os fantasmas)', html:`
@@ -695,6 +826,10 @@ const AJUDA = {
         nenhuma reta separa as duas classes (Minsky &amp; Papert, 1969).</li>
     <li><b>η</b> — aumente e os saltos ficam maiores; diminua e a convergência fica
         mais fina (e mais lenta).</li>
+    <li><b>sigmoide</b> — a fronteira vira uma faixa suave que afina conforme os pesos
+        crescem; o erro contínuo mantém os pesos se ajustando mesmo com todos os pontos
+        certos, até os passos ficarem desprezíveis (convergência assintótica). No XOR,
+        a faixa se acomoda numa posição de erro mínimo — mas o erro nunca zera.</li>
   </ul>
   <p>Os <b>fantasmas</b> são as retas já visitadas: a cada atualização o treino guarda
   a reta anterior e a desenha em azul-claro com transparência crescente — as mais novas
@@ -719,6 +854,8 @@ const AJUDA = {
 /* ================= interações ================= */
 document.querySelectorAll('.chip[data-preset]').forEach(c =>
   c.addEventListener('click', ()=>carregaPreset(c.dataset.preset)));
+document.getElementById('ativDegrau').addEventListener('click', ()=>defineAtivacao('degrau'));
+document.getElementById('ativSigmoide').addEventListener('click', ()=>defineAtivacao('sigmoide'));
 const arma0=document.getElementById('arma0'), arma1=document.getElementById('arma1');
 function armar(cl){
   armaClasse = (armaClasse===cl) ? null : cl;
@@ -787,6 +924,7 @@ window.addEventListener('resize', dimensiona);
 
 /* ================= partida ================= */
 dimensiona();
+renderEquacoes();
 carregaPreset('E');
 requestAnimationFrame(laco);
 </script>
