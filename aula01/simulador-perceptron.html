@@ -57,6 +57,7 @@
   .painel h2{
     margin:0; font-size:.72rem; letter-spacing:.13em; text-transform:uppercase;
     color:var(--cinza); border-bottom:1px solid #e6eaf4; padding-bottom:.35rem;
+    display:flex; align-items:center; gap:.45rem;
   }
   .chips{display:flex; flex-wrap:wrap; gap:.45rem}
   .chip{
@@ -113,12 +114,47 @@
   footer{max-width:1180px; margin:0 auto; padding:0 1.6rem 2.2rem}
   footer .cartao{padding:1rem 1.2rem; margin-top:.2rem}
   footer h2{font-size:.72rem; letter-spacing:.13em; text-transform:uppercase;
-            color:var(--cinza); margin:0 0 .5rem}
+            color:var(--cinza); margin:0 0 .5rem;
+            display:flex; align-items:center; gap:.45rem}
   footer ul{margin:.2rem 0 .9rem; padding-left:1.1rem; font-size:.88rem}
   footer li{margin:.18rem 0}
   .citacoes li{color:#333}
   .assinatura{font-size:.8rem; color:var(--cinza); margin-top:.6rem;
               border-top:1px solid #e6eaf4; padding-top:.6rem}
+  /* ============ sistema de ajuda "?" (mesmo estilo da Aula 2) ============ */
+  .ajuda{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:19px; height:19px; padding:0; margin-left:6px; vertical-align:2px;
+    border-radius:50%; border:1.4px solid var(--cinza); color:var(--cinza);
+    background:#fff; font-size:.74rem; font-weight:700; line-height:1; cursor:pointer;
+    letter-spacing:normal;
+  }
+  .ajuda:hover, .ajuda:focus-visible{border-color:var(--azul); color:#fff; background:var(--azul)}
+  .painel h2 .ajuda, footer h2 .ajuda{margin-left:0}
+  dialog#janela-ajuda{
+    border:none; border-left:4px solid var(--azul); border-radius:3px;
+    max-width:580px; width:calc(100vw - 40px);
+    padding:0; box-shadow:0 8px 30px rgba(22,32,48,.28); color:var(--tinta);
+  }
+  dialog#janela-ajuda::backdrop{background:rgba(22,32,48,.45)}
+  .aj-topo{display:flex; align-items:flex-start; justify-content:space-between;
+           gap:12px; padding:16px 18px 0}
+  .aj-topo h3{margin:0; font-size:1.02rem; color:var(--azul)}
+  .aj-fechar{
+    font:400 .82rem var(--sans); border:1px solid var(--cinza); border-radius:3px;
+    background:#fff; color:var(--cinza); padding:2px 9px; cursor:pointer;
+  }
+  .aj-fechar:hover{background:var(--cinza); color:#fff}
+  .aj-corpo{padding:10px 18px 18px; font-size:.9rem}
+  .aj-corpo p{margin:8px 0}
+  .aj-corpo ul, .aj-corpo ol{margin:8px 0; padding-left:20px}
+  .aj-corpo li{margin:5px 0}
+  .aj-corpo .eq{
+    display:block; font-family:var(--mono); font-size:.88rem;
+    background:var(--fundo); border-left:3px solid var(--azul-claro);
+    padding:7px 12px; margin:10px 0; overflow-x:auto; white-space:nowrap;
+  }
+  .aj-corpo b{color:var(--azul)}
   @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
 </style>
 </head>
@@ -128,7 +164,9 @@
   <div class="rotulo">GBC073 · Inteligência Computacional · Aula 1</div>
   <h1>Playground do Perceptron</h1>
   <p>Arraste os pontos, escolha uma porta lógica e observe a reta de decisão
-     obedecer à regra de 1958 — até o dia em que ela não consegue mais.</p>
+     obedecer à regra de 1958 — até o dia em que ela não consegue mais.
+     Os botões <span class="ajuda" style="cursor:default" aria-hidden="true">?</span>
+     explicam cada equação, parâmetro, opção e mensagem do painel.</p>
 </header>
 
 <main class="bancada">
@@ -142,7 +180,8 @@
   <!-- ==================== o painel ==================== -->
   <aside class="cartao painel" aria-label="Controles">
     <div>
-      <h2>Dados</h2>
+      <h2>Dados <button class="ajuda" data-ajuda="d-dados"
+          aria-label="Ajuda: dados e edição dos pontos">?</button></h2>
       <div class="chips" role="group" aria-label="Presets de dados">
         <button class="chip" data-preset="E"   aria-pressed="true">E</button>
         <button class="chip" data-preset="OU"  aria-pressed="false">OU</button>
@@ -167,7 +206,9 @@
     </div>
 
     <div>
-      <h2>Modelo e regra (Rosenblatt, 1958)</h2>
+      <h2>Modelo e regra (Rosenblatt, 1958)
+          <button class="ajuda" data-ajuda="d-modelo"
+          aria-label="Ajuda: modelo e regra de aprendizado">?</button></h2>
       <div class="modelo" aria-label="Equações do perceptron">
         <span>v = w·x + b = w₁x₁ + w₂x₂ + b</span>
         <span>ŷ = φ(v) = 1 se v ≥ 0, senão 0</span>
@@ -177,7 +218,8 @@
     </div>
 
     <div>
-      <h2>Treino</h2>
+      <h2>Treino <button class="ajuda" data-ajuda="d-treino"
+          aria-label="Ajuda: controles de treino">?</button></h2>
       <div class="linhabotoes" style="margin-top:.55rem">
         <button class="acao primaria" id="btnRodar">Executar</button>
         <button class="acao" id="btnSub">Sub-passo</button>
@@ -201,12 +243,15 @@
     </div>
 
     <div>
-      <h2>Estado</h2>
+      <h2>Estado <button class="ajuda" data-ajuda="d-estado"
+          aria-label="Ajuda: leitura de estado">?</button></h2>
       <div class="leitura" id="leitura" aria-live="polite"></div>
     </div>
 
     <div>
-      <h2>Passo a passo do aprendizado</h2>
+      <h2>Passo a passo do aprendizado
+          <button class="ajuda" data-ajuda="d-fases"
+          aria-label="Ajuda: fases do passo a passo">?</button></h2>
       <div class="fases" id="fases" aria-live="polite"></div>
     </div>
   </aside>
@@ -215,7 +260,8 @@
 <!-- ==================== rodapé: uso + citações ==================== -->
 <footer>
   <div class="cartao">
-    <h2>O que observar</h2>
+    <h2>O que observar <button class="ajuda" data-ajuda="d-observar"
+        aria-label="Ajuda: o que observar">?</button></h2>
     <ul>
       <li><b>E</b> e <b>OU</b>: a reta se ajusta e <i>congela</i> — os fantasmas
           param de nascer. É o teorema de convergência em ação.</li>
@@ -248,6 +294,15 @@
     </div>
   </div>
 </footer>
+
+<!-- ==================== janela de ajuda (estilo da Aula 2) ==================== -->
+<dialog id="janela-ajuda" aria-labelledby="aj-titulo">
+  <div class="aj-topo">
+    <h3 id="aj-titulo"></h3>
+    <button class="aj-fechar" id="aj-fechar">fechar ✕</button>
+  </div>
+  <div class="aj-corpo" id="aj-corpo"></div>
+</dialog>
 
 <script>
 "use strict";
@@ -556,6 +611,111 @@ function renderFases(){
   }).join('');
 }
 
+/* ============ sistema de ajuda "?" (mesmo estilo da Aula 2) ============ */
+const AJUDA = {
+'d-dados':{t:'Dados: presets e edição dos pontos', html:`
+  <p>Os <b>presets</b> carregam os quatro pontos das portas lógicas de duas entradas:</p>
+  <ul>
+    <li><b>E (AND)</b> — saída 1 só em (1,1). Linearmente separável.</li>
+    <li><b>OU (OR)</b> — saída 1 em três pontos. Também separável.</li>
+    <li><b>XOR</b> — saída 1 em (0,1) e (1,0), cantos opostos. Nenhuma reta separa as
+        duas classes: é o caso em que o perceptron nunca converge.</li>
+    <li><b>Livre</b> — sem preset: valem os pontos que você desenhou.</li>
+  </ul>
+  <p>No plano, o <b>preenchimento</b> marca a classe: borda ciano = classe 0, círculo
+  magenta = classe 1. O <b>anel tracejado carmim</b> marca um ponto classificado
+  errado pela reta atual; o <b>halo dourado</b> marca o exemplo da vez.</p>
+  <p>Edição:</p>
+  <ul>
+    <li><b>Arraste</b> um ponto para movê-lo.</li>
+    <li><b>Clique duplo</b> remove o ponto.</li>
+    <li><b>+ classe 0 / + classe 1</b> arma a classe do próximo ponto; depois
+        <b>clique no plano</b> para adicioná-lo. Clique de novo no botão para desarmar.</li>
+  </ul>
+  <p>Qualquer edição muda o preset para <b>Livre</b> e reinicia os pesos.</p>`},
+'d-modelo':{t:'O modelo: campo local, degrau e a regra de Rosenblatt', html:`
+  <p>O perceptron de Rosenblatt (1958) combina as entradas com pesos e um viés:</p>
+  <span class="eq">v = w·x + b = w₁x₁ + w₂x₂ + b</span>
+  <p>O degrau decide a classe:</p>
+  <span class="eq">ŷ = φ(v) = 1 se v ≥ 0, senão 0</span>
+  <p>A fronteira v = 0 é uma <b>reta</b>: o lado ŷ = 1 fica sombreado de magenta e o
+  lado ŷ = 0 de ciano. O vetor (w₁, w₂) é perpendicular à reta e aponta para o lado
+  ŷ = 1 (a seta azul); o viés <b>b</b> desloca a reta sem girá-la.</p>
+  <p>Quando o exemplo é classificado errado, a regra empurra os pesos na direção dele:</p>
+  <span class="eq">w ← w + η·(y − ŷ)·x</span>
+  <span class="eq">b ← b + η·(y − ŷ)</span>
+  <p>Acertou (y − ŷ = 0): nada muda. Errou: cada peso anda η·(y−ŷ)·xᵢ — aproximando a
+  reta do ponto errado.</p>`},
+'d-treino':{t:'Treino: passos, η e velocidade', html:`
+  <ul>
+    <li><b>Executar / Pausar</b> — roda o treino em loop; cada passo processa um
+        exemplo, em ordem cíclica.</li>
+    <li><b>Sub-passo</b> — avança uma das cinco fases do passo a passo, uma de cada vez.</li>
+    <li><b>Um exemplo</b> — completa as cinco fases do exemplo da vez.</li>
+    <li><b>Uma época</b> — uma passada completa por todos os pontos.</li>
+    <li><b>Reiniciar pesos</b> — zera w₁, w₂ e b e apaga o histórico de fantasmas.</li>
+  </ul>
+  <p><b>η (taxa de aprendizado)</b> — o tamanho do passo de cada atualização. η grande:
+  saltos maiores, convergência mais rápida e mais bruta; η pequeno: passos finos,
+  convergência mais lenta.</p>
+  <p><b>velocidade</b> — só controla quantos exemplos por segundo o loop executa; não
+  muda a matemática.</p>
+  <p>Teclado: <b>espaço</b> executa/pausa · <b>s</b> sub-passo · <b>e</b> um exemplo.</p>`},
+'d-estado':{t:'Estado: o que a leitura mostra', html:`
+  <p>A caixa <b>Estado</b> mostra os valores atuais do modelo e do treino:</p>
+  <ul>
+    <li><b>w = (w₁, w₂)</b> e <b>b</b> — os pesos e o viés da reta desenhada.</li>
+    <li><b>época</b> — passadas completas pelos pontos já executadas.</li>
+    <li><b>atualizações</b> — quantas vezes a regra mudou os pesos (só conta quando
+        houve erro).</li>
+    <li><b>erros agora</b> — quantos pontos estão do lado errado da reta atual.</li>
+  </ul>
+  <p>A faixa de status no topo do plano muda de cor conforme o estado: <b>verde</b> =
+  convergiu (todos os pontos certos; o treino congela), <b>carmim</b> = oscilando
+  (dados não linearmente separáveis; a regra nunca para), <b>azul</b> = treinando,
+  <b>cinza</b> = pausado.</p>`},
+'d-fases':{t:'Passo a passo: as 5 fases de cada exemplo', html:`
+  <p>Cada exemplo percorre cinco fases; use <b>Sub-passo</b> para vê-las uma a uma —
+  os símbolos são trocados pelos números do exemplo em curso:</p>
+  <ol>
+    <li><b>Observar</b> — qual ponto é o exemplo da vez (halo dourado no plano).</li>
+    <li><b>Campo local</b> — v = w₁x₁ + w₂x₂ + b.</li>
+    <li><b>Ativação</b> — ŷ = φ(v): 1 se v ≥ 0, senão 0.</li>
+    <li><b>Erro</b> — e = y − ŷ: +1, −1 ou 0.</li>
+    <li><b>Atualização</b> — se e ≠ 0, os pesos andam η·e·x e o viés η·e; se e = 0,
+        nada muda e a fase fica marcada como pulada.</li>
+  </ol>
+  <p>Fases concluídas ficam destacadas; a próxima fica com fundo dourado.</p>`},
+'d-observar':{t:'O que observar (e como ler os fantasmas)', html:`
+  <ul>
+    <li><b>E e OU</b> — a reta se ajusta e <i>congela</i>: os fantasmas param de nascer.
+        É o teorema de convergência (Novikoff, 1962) em ação — dados linearmente
+        separáveis convergem em tempo finito.</li>
+    <li><b>XOR</b> — os fantasmas nunca param: a regra oscila para sempre, porque
+        nenhuma reta separa as duas classes (Minsky &amp; Papert, 1969).</li>
+    <li><b>η</b> — aumente e os saltos ficam maiores; diminua e a convergência fica
+        mais fina (e mais lenta).</li>
+  </ul>
+  <p>Os <b>fantasmas</b> são as retas já visitadas: a cada atualização o treino guarda
+  a reta anterior e a desenha em azul-claro com transparência crescente — as mais novas
+  são as mais fortes. É a assinatura da página: dá para ver a trajetória dos pesos.</p>`},
+};
+
+(function(){
+  const dlg = document.getElementById('janela-ajuda');
+  document.addEventListener('click', ev=>{
+    const b = ev.target.closest('button.ajuda[data-ajuda]');
+    if(!b) return;
+    const item = AJUDA[b.dataset.ajuda];
+    if(!item) return;
+    document.getElementById('aj-titulo').textContent = item.t;
+    document.getElementById('aj-corpo').innerHTML = item.html;
+    dlg.showModal();
+  });
+  document.getElementById('aj-fechar').onclick = ()=> dlg.close();
+  dlg.addEventListener('click', ev=>{ if(ev.target===dlg) dlg.close(); });
+})();
+
 /* ================= interações ================= */
 document.querySelectorAll('.chip[data-preset]').forEach(c =>
   c.addEventListener('click', ()=>carregaPreset(c.dataset.preset)));
@@ -585,6 +745,7 @@ document.getElementById('vel').addEventListener('input', e=>{
 });
 document.addEventListener('keydown', e=>{
   if (e.target.tagName==='INPUT') return;
+  if (document.getElementById('janela-ajuda').open) return;
   if (e.code==='Space'){ e.preventDefault();
     if(!convergiu){ rodando=!rodando; timerAcc=0; atualizaPainel(); } }
   if (e.key==='s'){ rodando=false; subPasso(); }
