@@ -19,3 +19,357 @@
   --texto: #1B2130; --fundo: #FFFFFF; --letterbox: #0E1526; --painel: #F5F7FB; --linha: #D7DDEA;
 
   --sans: "Fira Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Fira Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+}
+[data-dir="back"] { --dur-morph: 520ms; --dur-fade: 280ms; }
+
+/* ============================================================ palco */
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--letterbox); }
+body { font-family: var(--sans); color: var(--texto); }
+.viewport { position: fixed; inset: 0; }
+.palco {
+  /* centro do palco = centro da janela, independentemente do tamanho dela */
+  position: absolute; left: 50%; top: 50%; margin-left: -960px; margin-top: -540px;
+  width: 1920px; height: 1080px;
+  transform: rotate(var(--rot, 0deg)) scale(var(--k, 1)); transform-origin: 50% 50%;
+  background: var(--fundo); overflow: hidden;
+}
+.palco::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 10px; background: var(--azul); }
+
+/* ============================================================ cabeçalho (um título por ato, handoff) */
+.titulo { position: absolute; left: 100px; top: 54px; width: 1720px; opacity: 0; transition: opacity 280ms linear; }
+.titulo.on { opacity: 1; transition: opacity var(--dur-fade) var(--ease-soft) 180ms; }
+.titulo h1 { margin: 0; font-size: 54px; line-height: 1.1; font-weight: 700; color: var(--azul); }
+.titulo p  { margin: 10px 0 0; font-size: 27px; color: var(--cinza); }
+
+.rodape { position: absolute; left: 100px; right: 100px; top: 1024px; display: flex; justify-content: space-between; font-size: 20px; color: var(--cinza); }
+.rodape .passo { font-variant-numeric: tabular-nums; }
+
+/* ============================================================ gestos */
+.rise { opacity: 0; transform: translate3d(0, 24px, 0);
+  transition: transform var(--dur-morph) var(--ease-morph) calc(var(--i, 0) * var(--stag)),
+              opacity   var(--dur-fade)  var(--ease-soft)  calc(var(--i, 0) * var(--stag)); }
+.rise.on { opacity: 1; transform: none; }
+.fade { opacity: 0; transition: opacity var(--dur-fade) var(--ease-soft) calc(var(--i, 0) * var(--stag)); }
+.fade.on { opacity: 1; }
+.pop { display: inline-block; opacity: 0; transform: scale(0.86);
+  transition: transform 520ms var(--ease-out) calc(var(--i, 0) * var(--stag)),
+              opacity   320ms var(--ease-soft) calc(var(--i, 0) * var(--stag)); }
+.pop.on { opacity: 1; transform: none; }
+/* saída em bloco: quando um grupo sai, todo mundo com --i: 0 */
+.grupo:not(.on) .rise, .grupo:not(.on) .fade, .grupo:not(.on) .pop { --i: 0 !important; }
+.grupo { position: absolute; inset: 0; visibility: hidden; opacity: 0; transition: opacity 300ms var(--ease-soft), visibility 0s 300ms; }
+.grupo.on { visibility: visible; opacity: 1; transition: opacity 300ms var(--ease-soft) 120ms, visibility 0s; }
+.grupo:not(.on) * { animation-play-state: paused !important; }
+
+/* ============================================================ legenda (uma frase por passo) */
+.legenda { position: absolute; left: 140px; top: 265px; width: 1640px; height: 70px; font-size: 31px; line-height: 1.25; }
+.legenda span { position: absolute; inset: 0; opacity: 0; transition: opacity 280ms linear; }
+.legenda span.on { opacity: 1; transition: opacity var(--dur-fade) var(--ease-soft) 180ms; }
+.legenda b { font-weight: 500; color: var(--azul); }
+.legenda .rj { color: var(--carmim); font-weight: 500; }
+.legenda .vd { color: var(--verde); font-weight: 500; }
+.legenda .ci { color: var(--ciano); font-weight: 500; }
+
+/* ============================================================ o gráfico persistente: 48 camadas */
+.grafico {
+  position: absolute; left: 140px; top: 355px; width: 1640px; height: 560px; box-sizing: border-box;
+  background: var(--painel); border-radius: 16px; border: 2px solid var(--linha);
+  transform: translate3d(var(--gx, 0px), var(--gy, 0px), 0) scale(var(--gs, 1)); transform-origin: 50% 50%;
+  transition: transform var(--dur-morph) var(--ease-morph);
+  will-change: transform;
+}
+/* estado mini: canto superior direito, enquanto o resto do deck fala */
+.palco.mini .grafico { --gx: 614px; --gy: -401px; --gs: 0.30; }
+.grafico .eixo-y { position: absolute; left: 0; top: 40px; width: 78px; height: 480px; font-size: 20px; color: var(--cinza); font-variant-numeric: tabular-nums; }
+.grafico .eixo-y span { position: absolute; right: 12px; transform: translateY(-50%); }
+.grafico .plot { position: absolute; left: 80px; top: 40px; width: 1540px; height: 480px; }
+.grafico .ref { position: absolute; left: 0; right: 0; top: 240px; border-top: 3px dashed var(--dourado); }
+.grafico .ref b { position: absolute; right: 6px; top: -30px; font-size: 20px; color: #9A6B00; font-weight: 500; }
+.grafico .barras { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(48, 1fr); align-items: end; padding: 0 4px; box-sizing: border-box; }
+.barra { height: 480px; width: 22px; margin: 0 auto; border-radius: 4px 4px 0 0;
+  background: var(--azul-claro); transform-origin: 50% 100%;
+  transform: scaleY(var(--h, 0.5));
+  transition: transform var(--dur-morph) var(--ease-morph) calc(var(--i) * var(--stag-barra)),
+              background-color 600ms var(--ease-soft) calc(var(--i) * var(--stag-barra)); }
+.palco[data-estado="some"]   .barra { background: var(--carmim); }
+.palco[data-estado="explode"] .barra { background: var(--carmim); }
+.palco[data-estado="ok"]     .barra { background: var(--verde); }
+.grafico .eixo-x { position: absolute; left: 80px; right: 20px; top: 526px; display: flex; justify-content: space-between; font-size: 20px; color: var(--cinza); }
+.grafico .aviso { position: absolute; right: 24px; top: 24px; font-size: 26px; font-weight: 700; color: var(--carmim); opacity: 0; transition: opacity var(--dur-fade) var(--ease-soft); }
+.palco[data-estado="explode"] .aviso { opacity: 1; }
+/* o gesto excepcional: o sinal atravessa as 48 camadas, uma vez */
+.varredura { position: absolute; top: 0; bottom: 0; width: 120px; left: -140px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(30,142,90,0) 0%, rgba(30,142,90,0.35) 50%, rgba(30,142,90,0) 100%); opacity: 0; }
+@keyframes varrer { 0% { transform: translate3d(0,0,0); opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { transform: translate3d(1820px,0,0); opacity: 0; } }
+[data-dir="fwd"][data-passo="8"] .varredura { animation: varrer 1.4s 0.45s var(--ease-soft) both; }
+
+/* ============================================================ cartões e blocos */
+.cartao { position: absolute; box-sizing: border-box; border-radius: 14px; padding: 26px 34px; background: var(--painel); border-left: 8px solid var(--azul-claro); }
+.cartao h3 { margin: 0 0 12px; font-size: 26px; font-weight: 700; color: var(--azul); }
+.codigo { font-family: var(--mono); font-size: 25px; line-height: 1.55; white-space: pre; }
+.codigo .kw { color: var(--azul); font-weight: 500; } .codigo .cm { color: var(--cinza); } .codigo .fn { color: var(--ciano); font-weight: 500; }
+
+.chip { position: absolute; box-sizing: border-box; height: 100px; border-radius: 12px; padding: 14px 22px; background: #fff; border: 2px solid var(--linha); font-size: 23px; line-height: 1.3; }
+.chip b { display: block; color: var(--azul); font-weight: 700; font-size: 22px; margin-bottom: 4px; }
+
+.bloco { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border-radius: 12px; font-size: 24px; line-height: 1.2; }
+.bloco small { display: block; font-size: 19px; color: var(--cinza); margin-top: 6px; }
+.harness-b { background: var(--painel); border: 2px solid var(--azul-claro); }
+.aluno-b { background: #E3F3F5; border: 4px solid var(--ciano); }
+.saida-b { background: #FBEAF1; border: 2px solid var(--magenta); }
+
+.h2 { position: absolute; margin: 0; font-size: 33px; font-weight: 700; color: var(--azul); }
+.formula { position: absolute; font-size: 42px; font-style: italic; white-space: nowrap; display: flex; align-items: center; gap: 10px; }
+.formula .rm { font-style: normal; }
+.frac { display: inline-flex; flex-direction: column; align-items: center; font-size: 36px; }
+.frac span { padding: 0 8px; } .frac span:first-child { border-bottom: 3px solid var(--texto); }
+.sub { font-size: 60%; vertical-align: -0.35em; } .sup { font-size: 60%; vertical-align: 0.5em; }
+.texto { position: absolute; font-size: 26px; line-height: 1.45; }
+.texto b { color: var(--azul); font-weight: 500; }
+
+.tabela { position: absolute; border-collapse: collapse; font-size: 25px; }
+.tabela th, .tabela td { padding: 0 16px; height: 56px; text-align: center; border-bottom: 1px solid var(--linha); }
+.tabela th { font-weight: 500; border-bottom: 3px solid var(--azul); color: var(--azul); }
+.tabela td:first-child, .tabela th:first-child { text-align: left; }
+.tabela tr.dest td { background: #E8F5EE; font-weight: 500; }
+.tabela .mono { font-family: var(--mono); font-size: 22px; }
+a.doc { color: inherit; text-decoration: underline dotted var(--azul-claro); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+a.doc:hover { color: var(--azul-claro); }
+.tabela .ok { color: var(--verde); font-weight: 700; } .tabela .mal { color: var(--carmim); font-weight: 700; }
+
+/* ============================================================ movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+  .palco, .palco[data-dir="back"] { --dur-morph: 1ms; --dur-fade: 150ms; --stag: 0ms; --stag-barra: 0ms; }
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; transition-delay: 0ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="viewport">
+<div class="palco" id="palco" data-passo="0" data-dir="fwd" data-estado="intro">
+
+  <!-- ===================== títulos ===================== -->
+  <header class="titulo" data-t="0,1,2,8"><h1>Desafio 2: uma rede de 48 camadas treina?</h1><p>Sem BatchNorm, sem conexões residuais. Só <em>Linear → f → Linear → f → …</em></p></header>
+  <header class="titulo" data-t="3,4,5"><h1>O que você entrega</h1><p>Duas funções. O resto — modelo, dados, treino, escore — é o <em>harness</em>, igual para todos</p></header>
+  <header class="titulo" data-t="6,7"><h1>A conta que resolve o desafio</h1><p>Propagação de sinal: o que acontece com a variância a cada camada</p></header>
+  <header class="titulo" data-t="9,10"><h1>Como será pontuado e como entregar</h1><p>Tarefas públicas para você iterar; na correção, tarefas ocultas da mesma família</p></header>
+
+  <!-- ===================== legenda ===================== -->
+  <div class="legenda">
+    <span data-p="0">Um MLP de largura 256. Cada barra é uma camada; a altura é a <b>variância da pré-ativação</b> no passo 0, em escala log. Sinal saudável fica na linha dourada: variância ≈ 1.</span>
+    <span data-p="1"><b>Baseline do desafio:</b> tanh + pesos U(−0,05, 0,05). Cada camada multiplica a variância por ≈ 0,2. Na camada 20 o sinal é 10⁻¹²: <span class="rj">o gradiente some</span> e a rede não sai da chance em L = 48.</span>
+    <span data-p="2">O oposto também mata: ReLU com pesos N(0, 0,2²) multiplica por ≈ 5 a cada camada. Na 20ª já passou de 10¹²; a perda vira <span class="rj">NaN</span> no primeiro lote. Sumir e explodir são as duas mortes.</span>
+    <span data-p="8"><span class="vd">Ganho calibrado</span>: fan_in · Var(w) · E[f(z)²] = 1. A variância fica em 1 nas 48 camadas, o gradiente chega à primeira camada e a rede treina — com tanh, ReLU, GELU, o que você escolher.</span>
+  </div>
+
+  <!-- ===================== gráfico persistente ===================== -->
+  <div class="grafico" id="grafico">
+    <div class="eixo-y"><span style="top:0">10<sup>12</sup></span><span style="top:120px">10<sup>6</sup></span><span style="top:240px">1</span><span style="top:360px">10<sup>−6</sup></span><span style="top:480px">10<sup>−12</sup></span></div>
+    <div class="plot">
+      <div class="barras" id="barras"></div>
+      <div class="ref"><b>variância 1: sinal preservado</b></div>
+      <div class="varredura"></div>
+    </div>
+    <div class="eixo-x"><span>camada 1</span><span>12</span><span>24</span><span>36</span><span>camada 48</span></div>
+    <div class="aviso">perda = NaN no lote 1</div>
+  </div>
+
+  <!-- ===================== ATO 2: o que você entrega (3–5) ===================== -->
+  <section class="grupo" data-g="3,4,5">
+    <div class="cartao rise" data-p="3" style="--i:0; left:100px; top:355px; width:800px; height:280px; border-left-color:var(--ciano)">
+      <h3>1. A não linearidade</h3>
+      <div class="codigo"><span class="kw">def</span> <span class="fn">ativacao</span>(x: torch.Tensor) -> torch.Tensor:
+    <span class="cm"># elemento a elemento, sem parâmetros,</span>
+    <span class="cm"># sem olhar o lote. A derivada é do autograd.</span>
+    <span class="kw">return</span> torch.relu(x)      <span class="cm"># exemplo</span></div>
+    </div>
+    <div class="cartao rise" data-p="3" style="--i:1; left:1020px; top:355px; width:800px; height:280px; border-left-color:var(--ciano)">
+      <h3>2. A escala inicial dos pesos</h3>
+      <div class="codigo"><span class="kw">@torch.no_grad</span>()
+<span class="kw">def</span> <span class="fn">inicializar</span>(W, b, fan_in, fan_out,
+                camada, n_camadas) -> None:
+    <span class="cm"># preenche W (fan_out, fan_in) e b in-place</span>
+    W.normal_(0, (2 / fan_in) ** 0.5); b.zero_()</div>
+    </div>
+
+    <div class="chip rise" data-p="4" style="--i:0; left:100px; top:685px; width:324px"><b>elemento a elemento</b>perturbar x[i] só muda a saída i — o harness testa</div>
+    <div class="chip rise" data-p="4" style="--i:1; left:449px; top:685px; width:324px"><b>sem parâmetros, sem lote</b>nada de nn.Parameter; permutar linhas permuta a saída</div>
+    <div class="chip rise" data-p="4" style="--i:2; left:798px; top:685px; width:324px"><b>diferenciável</b>use operações do torch; sem gradiente, sem treino</div>
+    <div class="chip rise" data-p="4" style="--i:3; left:1147px; top:685px; width:324px"><b>in-place, sem NaN</b>inicializar preenche W e b e devolve None</div>
+    <div class="chip rise" data-p="4" style="--i:4; left:1496px; top:685px; width:324px"><b>camada e n_camadas</b>você pode inicializar a última camada diferente da primeira</div>
+
+    <div class="bloco harness-b rise" data-p="5" style="--i:0; left:100px; top:825px; width:330px; height:170px">3 datasets achatados<small>MNIST · Fashion · CIFAR-10</small></div>
+    <div class="bloco aluno-b rise" data-p="5" style="--i:1; left:470px; top:825px; width:360px; height:170px">MLP 256 × L<small>L ∈ {4, 16, 48} · sua f e sua init</small></div>
+    <div class="bloco harness-b rise" data-p="5" style="--i:2; left:870px; top:825px; width:330px; height:170px">SGD fixo<small>lr 0,05 · momento 0,9 · 3 épocas</small></div>
+    <div class="bloco saida-b rise" data-p="5" style="--i:3; left:1240px; top:825px; width:250px; height:170px">acurácia<small>de teste</small></div>
+    <div class="bloco harness-b rise" data-p="5" style="--i:4; left:1530px; top:825px; width:290px; height:170px; border-color:var(--dourado); background:#FEF6E2">raio-X<small>var. e ‖grad‖ por camada</small></div>
+  </section>
+
+  <!-- ===================== ATO 3: a conta (6–7) ===================== -->
+  <section class="grupo" data-g="6,7">
+    <h2 class="h2 rise" data-p="6" style="--i:0; left:100px; top:360px">Uma camada: z′ = W f(z) + b, com W ~ N(0, s²)</h2>
+    <div class="formula rise" data-p="6" style="--i:1; left:100px; top:430px">
+      <span class="rm">Var(</span>z′<span class="rm">) = fan_in · s² · E[</span>f<span class="rm">(</span>z<span class="rm">)²]</span>
+    </div>
+    <p class="texto rise" data-p="6" style="--i:2; left:100px; top:520px; width:860px">
+      Se z ~ N(0, 1), cada camada <b>multiplica</b> a variância por esse fator. Em 48 camadas, 0,2 vira 10⁻³³ e 5 vira 10³³.
+      Só há um jeito de sobreviver: fator igual a 1.
+    </p>
+    <div class="formula rise" data-p="6" style="--i:3; left:100px; top:660px; color:var(--verde)">
+      s² <span class="rm">=</span>
+      <span class="frac"><span>1</span><span>fan_in · E[f(z)²]</span></span>
+    </div>
+    <p class="texto rise" data-p="6" style="--i:4; left:100px; top:780px; width:860px">
+      E[f(z)²] você <b>calcula uma vez</b>: analiticamente, ou amostrando um milhão de z ~ N(0,1) e tirando a média de f(z)².
+      Xavier e He são casos particulares desta linha.
+    </p>
+
+    <table class="tabela rise" data-p="7" style="--i:0; left:1020px; top:360px; width:800px">
+      <thead><tr><th>f</th><th>E[f(z)²]</th><th>fan_in · s²</th><th>nome</th></tr></thead>
+      <tbody>
+        <tr><td>identidade</td><td>1,00</td><td>1</td><td class="mono"><a class="doc" href="https://docs.pytorch.org/docs/stable/nn.init.html#torch.nn.init.xavier_normal_" target="_blank" rel="noopener">LeCun / Xavier</a></td></tr>
+        <tr><td><a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.relu.html" target="_blank" rel="noopener">ReLU</a></td><td>0,50</td><td>2</td><td class="mono"><a class="doc" href="https://docs.pytorch.org/docs/stable/nn.init.html#torch.nn.init.kaiming_normal_" target="_blank" rel="noopener">He (2015)</a></td></tr>
+        <tr><td><a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.leaky_relu.html" target="_blank" rel="noopener">LeakyReLU 0,01</a></td><td>0,50</td><td>2</td><td class="mono">He</td></tr>
+        <tr><td><a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.tanh.html" target="_blank" rel="noopener">tanh</a></td><td>0,39</td><td>2,5</td><td class="mono">—</td></tr>
+        <tr><td><a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.gelu.html" target="_blank" rel="noopener">GELU</a></td><td>0,43</td><td>2,4</td><td class="mono">—</td></tr>
+        <tr><td><a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.elu.html" target="_blank" rel="noopener">ELU</a></td><td>0,65</td><td>1,5</td><td class="mono">—</td></tr>
+        <tr class="dest"><td><a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.selu.html" target="_blank" rel="noopener">SELU</a></td><td>1,00</td><td>1</td><td class="mono"><a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.SELU.html" target="_blank" rel="noopener">auto-normalizante</a></td></tr>
+      </tbody>
+    </table>
+    <p class="texto rise" data-p="7" style="--i:1; left:1020px; top:790px; width:800px; font-size:22px; color:var(--cinza)">
+      API: <a class="doc" href="https://docs.pytorch.org/docs/stable/nn.init.html#torch.nn.init.calculate_gain" target="_blank" rel="noopener">nn.init.calculate_gain</a> ·
+      <a class="doc" href="https://docs.pytorch.org/docs/stable/nn.init.html" target="_blank" rel="noopener">torch.nn.init</a> ·
+      <a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.Tensor.normal_.html" target="_blank" rel="noopener">Tensor.normal_</a> ·
+      <a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.Tensor.uniform_.html" target="_blank" rel="noopener">Tensor.uniform_</a> ·
+      <a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.no_grad.html" target="_blank" rel="noopener">torch.no_grad</a>
+    </p>
+    <p class="texto rise" data-p="7" style="--i:2; left:1020px; top:850px; width:800px; font-size:24px; color:var(--cinza)">
+      Cuidado com o que a tabela não diz: tanh e sigmoide <b>saturam</b> (a derivada some mesmo com variância certa) e a sigmoide tem média ≠ 0.
+      Variância preservada é necessária, não suficiente — por isso o desafio treina de verdade.
+    </p>
+  </section>
+
+  <!-- ===================== ATO 4: escore e entrega (9–10) ===================== -->
+  <section class="grupo" data-g="9,10">
+    <table class="tabela rise" data-p="9" style="--i:0; left:100px; top:355px; width:860px">
+      <thead><tr><th>tarefas públicas (9)</th><th>L = 4</th><th>L = 16</th><th>L = 48</th></tr></thead>
+      <tbody>
+        <tr><td>MNIST</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>FashionMNIST</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>CIFAR-10 achatado</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      </tbody>
+    </table>
+    <p class="texto rise" data-p="9" style="--i:1; left:100px; top:610px; width:860px">
+      <b>Ocultas</b> (correção): tarefas da mesma família — outros dados, outras profundidades e larguras — que não são divulgadas antes da entrega.
+      Cada tarefa roda com 3 sementes; vale a mediana.
+    </p>
+    <div class="formula rise" data-p="9" style="--i:2; left:100px; top:760px; font-size:38px">
+      s<span class="sub">t</span> <span class="rm">= clip</span><span class="rm" style="font-size:50px;line-height:1">(</span>
+      <span class="frac"><span>acc<span class="sub">t</span> − b<span class="sub">t</span></span><span>r<span class="sub">t</span> − b<span class="sub">t</span></span></span>
+      <span class="rm">, 0, 1,25</span><span class="rm" style="font-size:50px;line-height:1">)</span>
+      <span class="rm" style="margin-left:34px">S = 100 [0,7 média + 0,3 mín]</span>
+    </div>
+    <p class="texto rise" data-p="9" style="--i:3; left:100px; top:860px; width:860px; font-size:24px">
+      <span class="mal" style="color:var(--carmim);font-weight:500">b<sub>t</sub></span>: tanh + U(−0,05, 0,05) &nbsp;·&nbsp;
+      <span style="color:var(--verde);font-weight:500">r<sub>t</sub></span>: ReLU + He, viés zero &nbsp;·&nbsp; divergir (NaN) conta como acurácia da chance
+    </p>
+
+    <div class="cartao rise" data-p="10" style="--i:0; left:1020px; top:355px; width:800px; height:640px; border-left-color:var(--dourado); background:#FEF6E2">
+      <h3>Como entregar</h3>
+      <div class="texto" style="position:static; font-size:25px">
+        <p style="margin:0 0 14px"><b>1.</b> No <b>seu repositório</b>, crie a pasta <span class="codigo" style="font-size:23px">desafio2/</span> e dentro dela o arquivo <span class="codigo" style="font-size:23px">desafio2_nomes.py</span>, com <span class="codigo" style="font-size:23px">ativacao</span> e <span class="codigo" style="font-size:23px">inicializar</span>. Só <span class="codigo" style="font-size:23px">torch</span> e a biblioteca padrão.</p>
+        <p style="margin:0 0 14px"><b>2.</b> Teste em casa: <span class="codigo" style="font-size:23px">python harness_desafio2.py desafio2/desafio2_nomes.py --rapido</span> (10% dos dados, 1 época) e depois sem <span class="codigo" style="font-size:23px">--rapido</span>. Leia o <b>raio-X</b>: se a variância cai ou explode com a profundidade, você já sabe o que consertar antes de treinar.</p>
+        <p style="margin:0 0 14px"><b>3.</b> <b>Um slide</b>, só um (<span class="codigo" style="font-size:23px">desafio2/slide.pdf</span>), apresentado em 2 minutos na aula da entrega: qual f e qual s², por quê, e um gráfico de variância por camada. Sem relatório.</p>
+        <p style="margin:0 0 14px; font-size:22px; color:var(--cinza)"><b>API do harness:</b>
+          <a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.Linear.html" target="_blank" rel="noopener">nn.Linear</a> ·
+          <a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.optim.SGD.html" target="_blank" rel="noopener">optim.SGD</a> ·
+          <a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.cross_entropy.html" target="_blank" rel="noopener">F.cross_entropy</a> ·
+          <a class="doc" href="https://docs.pytorch.org/docs/stable/generated/torch.autograd.backward.html" target="_blank" rel="noopener">autograd</a></p>
+        <p style="margin:0"><b>Caminhos:</b> deduzir o ganho da sua f · SELU + LeCun · usar <span class="codigo" style="font-size:23px">camada</span> para escalar a última camada · ativações com ganho embutido (√2·ReLU). Superar ReLU + He rende bônus até 125.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="rodape">
+    <span>GBC073 Inteligência Computacional, UFU</span>
+    <span class="passo" id="hud">1 / 11</span>
+  </footer>
+</div>
+</div>
+
+<script>
+(function () {
+  const palco = document.getElementById('palco');
+  const hud = document.getElementById('hud');
+  const MAX = 10;
+  let passo = 0;
+  try { passo = Math.min(MAX, Math.max(0, parseInt(location.hash.slice(1), 10) || 0)); } catch (_) {}
+
+  // ---------- as 48 barras: log10 da variância por camada em três regimes
+  const N = 48, barras = document.getElementById('barras');
+  for (let i = 0; i < N; i++) { const b = document.createElement('div'); b.className = 'barra'; b.style.setProperty('--i', i); barras.appendChild(b); }
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const regimes = {
+    some:    i => clamp(-0.68 * i, -12, 12),                      // tanh + U(−0,05,0,05): fator ≈ 0,21 por camada
+    explode: i => clamp( 0.71 * i, -12, 12),                      // ReLU + N(0, 0,2²): fator ≈ 5,1 por camada
+    ok:      i => clamp(0.12 * Math.sin(i * 1.7) - 0.03 * (i / N), -12, 12),   // ganho calibrado: ≈ 1 com ruído de amostra
+  };
+  function pintaBarras(regime) {
+    palco.dataset.estado = regime;
+    [...barras.children].forEach((b, i) => b.style.setProperty('--h', ((regimes[regime](i) + 12) / 24).toFixed(4)));
+  }
+  regimes.intro = regimes.ok;                                     // passo 0: mesma altura, cor neutra
+  const regimePorPasso = p => (p === 0 ? 'intro' : p === 1 ? 'some' : p === 2 ? 'explode' : p >= 8 ? 'ok' : null);
+
+  function ajusta() {
+    const vv = window.visualViewport;
+    const W = (vv && vv.width)  || document.documentElement.clientWidth  || innerWidth  || 1920;
+    const H = (vv && vv.height) || document.documentElement.clientHeight || innerHeight || 1080;
+    const retrato = H > W * 1.05;
+    const k = retrato ? Math.min(H / 1920, W / 1080) : Math.min(W / 1920, H / 1080);
+    palco.style.setProperty('--k', k > 0 ? k : 1);
+    palco.style.setProperty('--rot', retrato ? '90deg' : '0deg');
+  }
+
+  const lista = s => s.split(',').map(Number);
+  function aplica(dir) {
+    palco.dataset.passo = passo; palco.dataset.dir = dir;
+    // gráfico grande nos passos 0–2 e 8; mini nos demais
+    palco.classList.toggle('mini', !(passo <= 2 || passo === 8));
+    const r = regimePorPasso(passo); if (r) pintaBarras(r);
+    // títulos e grupos: on quando o passo pertence à lista
+    document.querySelectorAll('.titulo').forEach(t => t.classList.toggle('on', lista(t.dataset.t).includes(passo)));
+    document.querySelectorAll('.grupo').forEach(g => g.classList.toggle('on', lista(g.dataset.g).includes(passo)));
+    // legenda: só a frase do passo atual; demais elementos: ligados para passo >= p (repouso = estado final)
+    document.querySelectorAll('[data-p]').forEach(el => {
+      const p = parseInt(el.dataset.p, 10);
+      el.classList.toggle('on', el.closest('.legenda') ? p === passo : passo >= p);
+    });
+    hud.textContent = (passo + 1) + ' / ' + (MAX + 1);
+    try { history.replaceState(null, '', '#' + passo); } catch (_) {}
+  }
+  function vai(d) { const n = Math.min(MAX, Math.max(0, passo + d)); if (n === passo) return; const dir = n > passo ? 'fwd' : 'back'; passo = n; aplica(dir); }
+
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); vai(+1); }
+    if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key))       { e.preventDefault(); vai(-1); }
+    if (e.key === 'Home') { passo = 0; aplica('back'); }
+    if (e.key === 'End')  { passo = MAX; aplica('fwd'); }
+  });
+  const emRetrato = () => palco.style.getPropertyValue('--rot') === '90deg';
+  palco.addEventListener('click', e => { const pos = emRetrato() ? e.clientY / innerHeight : e.clientX / innerWidth; vai(pos < 0.25 ? -1 : +1); });
+  let t0 = null;
+  addEventListener('touchstart', e => { t0 = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+  addEventListener('touchend', e => { if (!t0) return; const dx = e.changedTouches[0].clientX - t0.x, dy = e.changedTouches[0].clientY - t0.y; const d = emRetrato() ? dy : dx; if (Math.abs(d) > 40) vai(d < 0 ? +1 : -1); t0 = null; });
+  addEventListener('resize', ajusta, { passive: true });
+  addEventListener('orientationchange', ajusta, { passive: true });
+  if (window.visualViewport) visualViewport.addEventListener('resize', ajusta, { passive: true });
+  if (window.ResizeObserver) new ResizeObserver(ajusta).observe(document.documentElement);
+
+  pintaBarras('intro'); ajusta(); aplica('fwd');
+  setTimeout(ajusta, 50); addEventListener('load', ajusta);
+})();
+</script>
+</body>
+</html>
