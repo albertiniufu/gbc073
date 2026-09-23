@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light" style="color-scheme:light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Treinando uma MLP em PyTorch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ease-morph:cubic-bezier(0.16,1,0.3,1);
+  --ease-out:cubic-bezier(0.2,0.75,0.2,1);
+  --ease-soft:cubic-bezier(0.4,0,0.2,1);
+  --dur-morph:780ms; --dur-fade:420ms;
+
+  --letterbox:#e9e6df; --bg:#f7f5f0; --painel:#ffffff; --linha:#e3ded3;
+  --texto:#1a1c21; --suave:#6a6e77; --acento:#e0482a; --azul:#2c67d6; --verde:#1e9a62;
+  --codebg:#fbfaf6; --sh:0 22px 50px -28px rgba(40,30,10,.28);
+  --k-kw:#b3261e; --k-str:#1e7a4c; --k-num:#9a5b00; --k-com:#8b8f98; --k-fn:#2c55b8; --k-bi:#7a3fb0;
+  --hl:rgba(224,72,42,.13);
+
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--letterbox)}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--texto);-webkit-font-smoothing:antialiased}
+.viewport{position:relative;width:100%;height:100%;overflow:hidden;touch-action:pan-y}
+.palco{position:absolute;left:50%;top:50%;width:1920px;height:1080px;margin:-540px 0 0 -960px;
+  transform:scale(var(--k,.5));background:var(--bg);overflow:hidden;user-select:none}
+[data-dir="back"]{--dur-morph:520ms;--dur-fade:280ms}
+
+/* ---------- seções (sem display:none) ---------- */
+.secao{position:absolute;inset:0;visibility:hidden;opacity:0;
+  transition:opacity 280ms linear,visibility 0s 280ms}
+.secao[data-on]{visibility:visible;opacity:1;
+  transition:opacity var(--dur-fade) var(--ease-soft) 180ms,visibility 0s}
+.secao:not([data-on]) *{animation-play-state:paused!important}
+
+/* entradas: só ao avançar, em onda */
+@keyframes subir{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:none}}
+[data-dir="fwd"] .secao[data-on] .e{animation:subir 560ms var(--ease-out) calc(200ms + var(--i,0)*70ms) both}
+[data-dir="fwd"] .secao[data-on] .p{animation:pop 480ms var(--ease-out) calc(300ms + var(--i,0)*70ms) both}
+
+/* ---------- cabeçalho ---------- */
+.cab{position:absolute;left:120px;top:46px}
+.kicker{font:600 22px/1 "JetBrains Mono",ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--acento)}
+.cab h2{margin:14px 0 0;font-size:50px;line-height:1.05;font-weight:800;letter-spacing:-.02em}
+
+/* trilho persistente: o indicador viaja */
+.trilho{position:absolute;left:50%;bottom:37px;margin-left:-395px;display:flex;gap:10px;opacity:0;
+  transition:opacity var(--dur-fade) var(--ease-soft)}
+.palco[data-trilho="on"] .trilho{opacity:1}
+.chip{position:relative;z-index:1;width:150px;height:50px;display:grid;place-items:center;border-radius:25px;
+  font:600 19px/1 Inter,system-ui,sans-serif;color:var(--suave);border:1px solid var(--linha);
+  transition:color var(--dur-fade) var(--ease-soft)}
+.chip.ativo{color:#fff}
+.indicador{position:absolute;left:0;top:0;width:150px;height:50px;border-radius:25px;background:var(--acento);
+  transform:translate3d(calc(var(--r,0)*160px),0,0);
+  transition:transform var(--dur-morph) var(--ease-morph)}
+
+/* ---------- rodapé ---------- */
+.rodape{position:absolute;left:120px;right:120px;bottom:34px;display:flex;align-items:center;justify-content:space-between;
+  font:500 20px/1 "JetBrains Mono",ui-monospace,monospace;color:var(--suave)}
+.nav{display:flex;align-items:center;gap:18px}
+.nav button{width:56px;height:56px;border-radius:28px;border:1px solid var(--linha);background:var(--painel);
+  color:var(--texto);font-size:26px;cursor:pointer}
+.nav button:disabled{opacity:.35;cursor:default}
+.progresso{position:absolute;left:0;bottom:0;height:6px;width:1920px;background:var(--acento);
+  transform-origin:0 50%;transform:scaleX(var(--prog,0));transition:transform var(--dur-morph) var(--ease-morph)}
+
+/* ---------- blocos ---------- */
+.corpo{position:absolute;left:120px;right:120px;top:196px;bottom:124px}
+.painel{background:var(--painel);border:1px solid var(--linha);border-radius:20px;box-shadow:var(--sh)}
+.code{margin:0;background:var(--codebg);border:1px solid var(--linha);border-radius:18px;padding:28px 34px;
+  font:400 25px/1.6 "JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;white-space:pre;overflow:hidden;color:var(--texto)}
+.code .ln{display:block;border-radius:6px;margin:0 -12px;padding:0 12px}
+.code .k{color:var(--k-kw);font-weight:600}.code .s{color:var(--k-str)}.code .n{color:var(--k-num)}
+.code .c{color:var(--k-com);font-style:italic}.code .f{color:var(--k-fn)}.code .b{color:var(--k-bi)}
+p,li{font-size:30px;line-height:1.45}
+.suave{color:var(--suave)}
+.destaque{color:var(--acento);font-weight:700}
+code.i{font:500 .88em "JetBrains Mono",ui-monospace,monospace;background:var(--codebg);border:1px solid var(--linha);
+  padding:2px 10px;border-radius:8px}
+.tag{display:inline-block;font:600 22px/1 "JetBrains Mono",monospace;padding:12px 18px;border-radius:12px;
+  border:1px solid var(--linha);background:var(--painel)}
+
+/* SVG */
+.plano{fill:var(--painel);stroke:var(--linha)}
+.grade{stroke:var(--linha);stroke-width:1}
+.dentro{fill:var(--acento)}.fora{fill:var(--azul);opacity:.55}
+.borda{fill:none;stroke:var(--texto);stroke-width:3;stroke-dasharray:12 12;animation:marchar 1.15s linear infinite}
+@keyframes marchar{to{stroke-dashoffset:-24}}
+.svgtxt{fill:var(--suave);font:500 20px Inter,system-ui,sans-serif}
+
+/* ---------- slide 0: capa ---------- */
+.capa{position:absolute;left:120px;top:0;bottom:0;width:980px;display:flex;flex-direction:column;justify-content:center}
+.capa h1{font-size:112px;line-height:.98;letter-spacing:-.035em;margin:26px 0 30px;font-weight:800}
+.capa p{font-size:38px;margin:0;color:var(--suave)}
+.dica{margin-top:70px;font:500 22px "JetBrains Mono",monospace;color:var(--suave)}
+.capa-arte{position:absolute;left:1180px;top:220px;width:640px;height:640px}
+
+/* ---------- slide 1: visão geral ---------- */
+.cinco{display:grid;grid-template-columns:repeat(5,1fr);gap:28px;height:560px;margin-top:40px}
+.cinco .painel{padding:38px 32px;display:flex;flex-direction:column}
+.cinco .num{font:800 72px/1 Inter,sans-serif;color:var(--acento)}
+.cinco h3{font-size:36px;margin:28px 0 14px;letter-spacing:-.01em}
+.cinco p{font-size:26px;margin:0;color:var(--suave);flex:1}
+.cinco .tag{font-size:18px;align-self:flex-start}
+
+/* ---------- genérico 2 colunas ---------- */
+.duas{display:grid;grid-template-columns:auto 1fr;gap:70px;align-items:center;height:100%}
+.col{display:flex;flex-direction:column;gap:30px}
+.col p{margin:0}
+
+/* slide 3: split + lotes */
+.barra{display:flex;height:96px;border-radius:16px;overflow:hidden;font:700 28px/96px Inter,sans-serif;color:#fff}
+.barra .tr{flex:8;background:var(--acento);padding-left:30px}
+.barra .va{flex:2;background:var(--azul);padding-left:24px}
+.lotes{display:grid;grid-template-columns:repeat(25,1fr);gap:8px}
+.lote{height:70px;border-radius:10px;background:var(--acento);opacity:.22;animation:lote 5s linear infinite;animation-delay:calc(var(--j)*.2s)}
+@keyframes lote{0%,3.5%{opacity:1;transform:translateY(-8px)}6%,100%{opacity:.22;transform:none}}
+.rot{font:600 22px/1 "JetBrains Mono",monospace;color:var(--suave);margin-bottom:14px}
+
+/* slide 4: rede */
+.no{fill:var(--painel);stroke:var(--texto);stroke-width:2.5;animation:fluxo 2.4s var(--ease-soft) infinite;animation-delay:calc(var(--L)*.45s)}
+@keyframes fluxo{0%,100%{fill:var(--painel)}12%{fill:var(--acento)}30%{fill:var(--painel)}}
+.aresta{stroke:var(--suave);stroke-width:1.2;opacity:.35}
+
+/* slide 5 */
+.pares{display:grid;grid-template-columns:1fr 1fr;gap:40px;height:100%}
+.pares .painel{padding:40px 44px;display:flex;flex-direction:column;gap:26px}
+.pares h3{margin:0;font-size:38px}
+.pares p{margin:0;font-size:28px}
+.conta{display:grid;grid-template-columns:auto auto auto;gap:14px 22px;align-items:center;font:500 26px "JetBrains Mono",monospace}
+.conta .seta{color:var(--suave)}
+
+/* slide 6: ciclo (o gesto excepcional) */
+.orbita{transform-box:view-box;transform-origin:330px 330px;animation:girar 6s linear infinite}
+@keyframes girar{to{transform:rotate(360deg)}}
+.ciclo-no{fill:var(--painel);stroke:var(--linha);stroke-width:2;animation:acende 6s linear infinite;animation-delay:calc(var(--k)*1.2s)}
+@keyframes acende{0%,15%{fill:var(--acento);stroke:var(--acento)}22%,100%{fill:var(--painel);stroke:var(--linha)}}
+.ciclo-txt{font:700 23px "JetBrains Mono",monospace;fill:var(--texto);text-anchor:middle}
+.ciclo-sub{font:500 17px Inter,sans-serif;fill:var(--suave);text-anchor:middle}
+.code .ln[data-p]{animation:linha 6s linear infinite;animation-delay:calc(var(--k)*1.2s)}
+@keyframes linha{0%,15%{background:var(--hl)}22%,100%{background:transparent}}
+
+/* slide 7 */
+.fluxo{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.fluxo .seta{font-size:30px;color:var(--suave)}
+.modos{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.modos .painel{padding:26px 30px}
+.modos h4{margin:0 0 10px;font:700 26px "JetBrains Mono",monospace}
+.modos p{margin:0;font-size:24px;color:var(--suave)}
+
+/* slide 8 */
+.resultado{display:grid;grid-template-columns:70px 250px 1fr;gap:18px 24px;align-items:center;font-size:26px}
+.resultado .l{font:800 30px Inter;color:var(--acento)}
+.trilha{height:30px;background:var(--codebg);border:1px solid var(--linha);border-radius:15px;overflow:hidden}
+.trilha i{display:block;height:100%;width:var(--w);background:var(--acento);border-radius:15px}
+.marca{fill:var(--texto);stroke:var(--painel);stroke-width:4}
+.marca-txt{font:800 30px Inter,sans-serif;fill:var(--texto)}
+
+/* slide 9 */
+.quatro{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:30px;height:100%}
+.quatro .painel{padding:34px 40px;display:flex;flex-direction:column;gap:14px}
+.quatro h3{margin:0;font-size:34px}
+.quatro p{margin:0;font-size:26px;color:var(--suave)}
+
+
+/* extras de dataset */
+.pipe{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:22px;align-items:stretch;height:430px;margin-top:30px}
+.pipe .painel{padding:34px 30px;display:flex;flex-direction:column;gap:18px}
+.pipe h3{margin:0;font-size:34px}
+.pipe p{margin:0;font-size:25px;color:var(--suave);flex:1}
+.pipe .seta{align-self:center;font-size:44px;color:var(--acento);font-weight:700}
+.pipe .tag{font-size:19px;align-self:flex-start}
+.mini{display:flex;flex-direction:column;gap:20px}
+.mini .painel{padding:24px 30px}
+.mini h4{margin:0 0 8px;font:700 25px "JetBrains Mono",monospace;color:var(--acento)}
+.mini p{margin:0;font-size:24px;color:var(--suave)}
+.dist{display:flex;height:64px;border-radius:14px;overflow:hidden;font:700 22px/64px Inter,sans-serif;color:#fff}
+.dist .fo{background:var(--azul);padding-left:20px}
+.dist .de{background:var(--acento);padding-left:16px}
+
+
+/* varlen */
+.s0{background:var(--acento)}.s1{background:var(--azul)}.s2{background:var(--verde)}.s3{background:#8a4fd0}
+.gpad{display:grid;grid-template-columns:repeat(7,80px);gap:8px}
+.cel{height:80px;border-radius:12px;display:grid;place-items:center;color:#fff;font:700 26px "JetBrains Mono",monospace}
+.cel.pad{background:transparent;border:2px dashed var(--linha);color:var(--suave)}
+.faixa{position:relative;display:flex;gap:6px;padding-bottom:70px}
+.faixa .cel{width:84px;height:84px;flex:none}
+.marco{position:absolute;top:92px;width:0;height:22px;border-left:3px solid var(--texto)}
+.marco span{position:absolute;top:26px;left:-30px;width:60px;text-align:center;font:700 24px "JetBrains Mono",monospace;color:var(--texto)}
+.budget{display:flex;flex-direction:column;gap:18px}
+.bl{display:flex;align-items:center;gap:18px}
+.bl .rot{margin:0;width:110px}
+.bb{display:flex;gap:4px;width:640px;height:56px;border:2px dashed var(--linha);border-radius:12px;padding:4px}
+.bb i{border-radius:8px;display:block}
+.mcel-on{fill:var(--acento)}.mcel-off{fill:var(--codebg);stroke:var(--linha);stroke-width:1}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.cmp .painel{padding:26px 30px}
+.cmp h4{margin:0 0 10px;font:700 26px Inter,sans-serif}
+.cmp p{margin:0;font-size:23px;color:var(--suave)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="viewport" id="vp">
+<div class="palco" id="palco" data-passo="0" data-dir="fwd">
+
+  <!-- trilho persistente -->
+  <div class="trilho" aria-hidden="true">
+    <div class="indicador"></div>
+    <div class="chip">Dados</div><div class="chip">Modelo</div><div class="chip">Loss</div><div class="chip">Loop</div><div class="chip">Uso</div>
+  </div>
+
+  <!-- 0 · capa -->
+  <section class="secao" data-on>
+    <div class="capa">
+      <div class="kicker e" style="--i:0">Aula · PyTorch</div>
+      <h1 class="e" style="--i:1">Treinando<br>uma MLP<br>em PyTorch</h1>
+      <p class="e" style="--i:2">O exemplo do círculo, parte por parte.</p>
+      <div class="dica e" style="--i:3">← → para navegar · toque nas laterais no celular</div>
+    </div>
+    <svg class="capa-arte p" style="--i:2" data-scatter="700" viewBox="0 0 640 640"></svg>
+  </section>
+
+  <!-- 1 · visão geral -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">Visão geral</div><h2>Todo treino em PyTorch tem 5 partes</h2></div>
+    <div class="corpo">
+      <div class="cinco">
+        <div class="painel e" style="--i:0"><div class="num">1</div><h3>Dados</h3><p>Gerar X e y, separar treino e validação, entregar em lotes.</p><span class="tag">DataLoader</span></div>
+        <div class="painel e" style="--i:1"><div class="num">2</div><h3>Modelo</h3><p>Camadas lineares intercaladas com ReLU.</p><span class="tag">nn.Module</span></div>
+        <div class="painel e" style="--i:2"><div class="num">3</div><h3>Loss e otimizador</h3><p>O que medir e como corrigir os pesos.</p><span class="tag">CrossEntropy · Adam</span></div>
+        <div class="painel e" style="--i:3"><div class="num">4</div><h3>Loop de treino</h3><p>Prever, medir, calcular gradiente, atualizar. Repetir.</p><span class="tag">backward · step</span></div>
+        <div class="painel e" style="--i:4"><div class="num">5</div><h3>Uso</h3><p>Avaliar acurácia e prever pontos novos.</p><span class="tag">eval · no_grad</span></div>
+      </div>
+      <p class="suave e" style="--i:5;margin-top:44px">O trilho no topo dos próximos slides mostra em qual parte estamos.</p>
+    </div>
+  </section>
+
+  <!-- 2 · dados: o problema -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados</div><h2>O problema: dentro ou fora do círculo?</h2></div>
+    <div class="corpo">
+      <div class="duas">
+        <svg class="p" style="--i:0;width:700px;height:700px" data-scatter="900" viewBox="0 0 640 640"></svg>
+        <div class="col">
+          <pre class="code e" style="--i:1">N = 2000
+X = torch.rand(N, 2) * 4 - 2   # pontos em [-2, 2]²
+y = (X.pow(2).sum(dim=1) &lt; 1.5).long()</pre>
+          <div class="e" style="--i:2;display:flex;gap:16px;flex-wrap:wrap">
+            <span class="tag">X.shape = [2000, 2]</span><span class="tag">y.shape = [2000]</span><span class="tag">y ∈ {0, 1}</span>
+          </div>
+          <p class="e" style="--i:3">Cada ponto tem 2 coordenadas. O rótulo é <span class="destaque">1</span> se x² + y² &lt; 1,5 (laranja) e <b style="color:var(--azul)">0</b> caso contrário.</p>
+          <p class="e suave" style="--i:4">Nenhuma reta separa as duas cores. Por isso precisamos de camadas escondidas com ativação não linear.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · dados: split e lotes -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados</div><h2>Separar e servir em lotes</h2></div>
+    <div class="corpo" style="display:grid;grid-template-columns:1fr 1fr;gap:60px">
+      <div class="col" style="justify-content:center">
+        <div class="e" style="--i:0"><div class="rot">2000 pontos → 80% / 20%</div>
+          <div class="barra"><div class="tr">treino · 1600</div><div class="va">val · 400</div></div></div>
+        <div class="e" style="--i:1"><div class="rot">1600 ÷ 64 = 25 lotes por época</div>
+          <div class="lotes" id="lotes"></div></div>
+        <p class="e" style="--i:2">O <code class="i">DataLoader</code> entrega um lote de 64 pontos por vez. Uma <span class="destaque">época</span> é passar pelos 25.</p>
+        <p class="e suave" style="--i:3"><code class="i">shuffle=True</code> só no treino: embaralhar evita que a rede aprenda a ordem dos dados.</p>
+      </div>
+      <div class="col" style="justify-content:center">
+        <pre class="code e" style="--i:1">n_train = int(0.8 * N)
+train_ds = TensorDataset(X[:n_train], y[:n_train])
+val_ds   = TensorDataset(X[n_train:], y[n_train:])
+
+train_dl = DataLoader(train_ds, batch_size=64,
+                      shuffle=True)
+val_dl   = DataLoader(val_ds, batch_size=256)</pre>
+        <p class="e suave" style="--i:4">A validação usa dados que a rede <b>nunca</b> vê no treino. É ela que diz se o modelo generaliza.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- 4 · dataloader por dentro -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · extra</div><h2>O DataLoader por dentro</h2></div>
+    <div class="corpo">
+      <div class="pipe">
+        <div class="painel e" style="--i:0"><h3>Sampler</h3><p>Decide a ordem dos índices. <code class="i">shuffle=True</code> usa um RandomSampler.</p><span class="tag">[17, 3, 942, …]</span></div>
+        <div class="seta e" style="--i:1">→</div>
+        <div class="painel e" style="--i:2"><h3>Dataset</h3><p>Para cada índice, devolve uma amostra.</p><span class="tag">ds[i] → (x, y)</span></div>
+        <div class="seta e" style="--i:3">→</div>
+        <div class="painel e" style="--i:4"><h3>collate_fn</h3><p>Junta 64 amostras em tensores. O padrão usa <code class="i">torch.stack</code>.</p><span class="tag">64 × (x, y)</span></div>
+        <div class="seta e" style="--i:5">→</div>
+        <div class="painel e" style="--i:6"><h3>Lote</h3><p>O que chega no loop de treino.</p><span class="tag">xb [64, 2] · yb [64]</span></div>
+      </div>
+      <p class="e" style="--i:7;margin-top:48px">Cada peça pode ser trocada. Os próximos slides mostram <span class="destaque">outras estruturas</span> usando classes de <code class="i">torch.utils.data</code>.</p>
+    </div>
+  </section>
+
+  <!-- 5 · dataset customizado -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · extra</div><h2>Dataset customizado (map-style)</h2></div>
+    <div class="corpo" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
+      <pre class="code e" style="--i:0;font-size:24px">from torch.utils.data import Dataset
+
+class CirculoDataset(Dataset):
+    def __init__(self, n, raio2=1.5):
+        self.X = torch.rand(n, 2) * 4 - 2
+        self.y = (self.X.pow(2).sum(dim=1) &lt; raio2).long()
+
+    def __len__(self):           # quantas amostras?
+        return len(self.X)
+
+    def __getitem__(self, i):    # a amostra i
+        return self.X[i], self.y[i]</pre>
+      <div class="col">
+        <p class="e" style="--i:1">O contrato são só <span class="destaque">dois métodos</span>: <code class="i">__len__</code> e <code class="i">__getitem__</code>. O DataLoader cuida do resto.</p>
+        <div class="mini e" style="--i:2">
+          <div class="painel"><h4>Quando usar</h4><p>Dados em disco carregados sob demanda (uma imagem por vez), ou transformações por amostra, como data augmentation.</p></div>
+          <div class="painel"><h4>Exemplo de __getitem__ lendo do disco</h4><p><code class="i">img = Image.open(self.caminhos[i])</code><br>O arquivo só é aberto quando o índice é pedido.</p></div>
+        </div>
+        <p class="e suave" style="--i:3">Uso: <code class="i">DataLoader(CirculoDataset(2000), batch_size=64, shuffle=True)</code></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · split, subset, concat -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · extra</div><h2>Dividir, recortar e juntar datasets</h2></div>
+    <div class="corpo" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
+      <pre class="code e" style="--i:0;font-size:24px">from torch.utils.data import (
+    random_split, Subset, ConcatDataset)
+
+ds = CirculoDataset(2000)
+
+train_ds, val_ds = random_split(
+    ds, [0.8, 0.2],
+    generator=torch.Generator().manual_seed(0))
+
+primeiros = Subset(ds, range(100))
+maior = ConcatDataset([ds, CirculoDataset(500)])</pre>
+      <div class="mini">
+        <div class="painel e" style="--i:1"><h4>random_split</h4><p>Divide aleatoriamente por frações ou tamanhos. O <code class="i">generator</code> com semente torna a divisão reprodutível.</p></div>
+        <div class="painel e" style="--i:2"><h4>Subset</h4><p>Uma “janela” sobre índices escolhidos. Ótimo para testar com poucos dados antes de treinar tudo.</p></div>
+        <div class="painel e" style="--i:3"><h4>ConcatDataset</h4><p>Cola datasets em sequência. Aqui <code class="i">len(maior) == 2500</code>.</p></div>
+        <p class="e suave" style="--i:4;margin:0">Nenhum deles copia os dados: guardam só índices e referências.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · iterable dataset -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · extra</div><h2>IterableDataset: dados em fluxo</h2></div>
+    <div class="corpo" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
+      <pre class="code e" style="--i:0;font-size:24px">from torch.utils.data import IterableDataset
+
+class CirculoStream(IterableDataset):
+    def __iter__(self):
+        while True:              # fluxo infinito
+            x = torch.rand(2) * 4 - 2
+            y = (x.pow(2).sum() &lt; 1.5).long()
+            yield x, y
+
+dl = DataLoader(CirculoStream(), batch_size=64)
+xb, yb = next(iter(dl))          # um lote</pre>
+      <div class="col">
+        <p class="e" style="--i:1">Em vez de <code class="i">__getitem__</code>, implementa <code class="i">__iter__</code>: não existe índice, as amostras simplesmente <span class="destaque">chegam em ordem</span>.</p>
+        <div class="mini e" style="--i:2">
+          <div class="painel"><h4>Quando usar</h4><p>Dados que não cabem na memória, arquivos lidos linha a linha, streams e logs.</p></div>
+          <div class="painel"><h4>Cuidados</h4><p><code class="i">shuffle=True</code> gera erro. Com fluxo infinito, conte passos em vez de épocas. Com <code class="i">num_workers &gt; 0</code>, cada worker repete o fluxo: divida o trabalho com <code class="i">get_worker_info()</code>.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · sampler -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · extra</div><h2>Sampler: equilibrar as classes</h2></div>
+    <div class="corpo" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
+      <pre class="code e" style="--i:0;font-size:22px">from torch.utils.data import WeightedRandomSampler
+
+y_train = y[:n_train]
+contagem = torch.bincount(y_train)     # [fora, dentro]
+peso_classe = 1.0 / contagem.float()
+pesos = peso_classe[y_train]           # 1 peso por amostra
+
+sampler = WeightedRandomSampler(
+    pesos, num_samples=len(pesos), replacement=True)
+
+train_dl = DataLoader(train_ds, batch_size=64,
+                      sampler=sampler)</pre>
+      <div class="col">
+        <p class="e" style="--i:1">No nosso círculo só uns <span class="destaque">29%</span> dos pontos estão dentro (área π·1,5 ÷ 16). A classe “fora” domina.</p>
+        <div class="e" style="--i:2"><div class="rot">sem sampler (esperado)</div>
+          <div class="dist"><div class="fo" style="flex:71">fora 71%</div><div class="de" style="flex:29">29%</div></div></div>
+        <div class="e" style="--i:3"><div class="rot">com WeightedRandomSampler (esperado)</div>
+          <div class="dist"><div class="fo" style="flex:50">fora 50%</div><div class="de" style="flex:50">dentro 50%</div></div></div>
+        <p class="e suave" style="--i:4">A classe rara é sorteada com mais frequência. <code class="i">sampler</code> e <code class="i">shuffle=True</code> não podem ser usados juntos.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · collate_fn e ImageFolder -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · extra</div><h2>Outras formas de amostra</h2></div>
+    <div class="corpo">
+      <div class="pares">
+        <div class="painel e" style="--i:0">
+          <h3>Sequências de tamanhos diferentes</h3>
+          <pre class="code" style="font-size:21px">from torch.nn.utils.rnn import pad_sequence
+
+def juntar(lote):
+    seqs, ys = zip(*lote)
+    xb = pad_sequence(seqs, batch_first=True)
+    return xb, torch.tensor(ys)
+
+dl = DataLoader(ds_textos, batch_size=32,
+                collate_fn=juntar)</pre>
+          <p class="suave">O collate padrão usa <code class="i">torch.stack</code>, que falha se as formas diferem. Um <code class="i">collate_fn</code> próprio completa com zeros até o maior tamanho do lote.</p>
+        </div>
+        <div class="painel e" style="--i:1">
+          <h3>Imagens em pastas (torchvision)</h3>
+          <pre class="code" style="font-size:21px">from torchvision import datasets, transforms
+
+ds = datasets.ImageFolder("fotos/",
+    transform=transforms.Compose([
+        transforms.Resize((64, 64)),
+        transforms.ToTensor()]))
+# fotos/cao/7.jpg  → classe 0
+# fotos/gato/1.jpg → classe 1</pre>
+          <p class="suave">Cada subpasta vira uma classe (em ordem alfabética). O <code class="i">Resize</code> deixa todas as imagens do mesmo tamanho para poderem ser empilhadas. O torchvision é instalado à parte.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- varlen 1 · problema do padding -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · varlen</div><h2>O custo do padding</h2></div>
+    <div class="corpo">
+      <div class="duas" style="grid-template-columns:auto 1fr;gap:80px">
+        <div class="e" style="--i:0"><div class="rot">4 sequências · comprimentos [3, 7, 2, 5]</div><div class="gpad" id="gpad"></div></div>
+        <div class="col">
+          <p class="e" style="--i:1">Para empilhar, o collate com padding completa tudo até a maior sequência do lote.</p>
+          <div class="e" style="--i:2;display:flex;gap:16px;flex-wrap:wrap">
+            <span class="tag">4 × 7 = 28 posições</span><span class="tag">17 tokens reais</span><span class="tag" style="color:var(--acento)">11 vazias (39%)</span>
+          </div>
+          <p class="e" style="--i:3">A GPU calcula sobre as posições vazias do mesmo jeito. Com textos reais, de 20 a 4000 tokens, o <span class="destaque">desperdício</span> pode passar da metade do lote.</p>
+          <p class="e suave" style="--i:4">E ainda é preciso mascarar: uma máscara de atenção para ignorar o padding e <code class="i">ignore_index=-100</code> na loss.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- varlen 2 · empacotar -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · varlen</div><h2>Varlen: uma fila de tokens + cu_seqlens</h2></div>
+    <div class="corpo">
+      <div class="e" style="--i:0"><div class="rot">x = torch.cat(seqs) · número = position_ids</div><div class="faixa" id="faixa"></div></div>
+      <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:50px;margin-top:18px">
+        <pre class="code e" style="--i:1;font-size:21px">def collate_varlen(lote):
+    seqs, ys = zip(*lote)                  # seqs: [L_i, d]
+    lens = torch.tensor([len(s) for s in seqs])
+    x = torch.cat(seqs)                    # [sum(L_i), d]
+    cu = F.pad(lens.cumsum(0), (1, 0)).int()  # [0,3,10,12,17]
+    pos = torch.cat([torch.arange(L) for L in lens])
+    return x, cu, int(lens.max()), pos, torch.tensor(ys)</pre>
+        <div class="col" style="gap:20px">
+          <p class="e" style="--i:2;font-size:27px">Nenhum padding: o lote é <span class="destaque">1 tensor achatado</span>. A sequência i ocupa <code class="i">x[cu[i]:cu[i+1]]</code>.</p>
+          <p class="e suave" style="--i:3;font-size:27px"><code class="i">position_ids</code> recomeçam em 0 em cada sequência, e <code class="i">max_seqlen</code> ajuda os kernels a dimensionar o trabalho.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- varlen 3 · orçamento de tokens -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · varlen</div><h2>Lotes por orçamento de tokens</h2></div>
+    <div class="corpo" style="display:grid;grid-template-columns:1.1fr 1fr;gap:60px;align-items:center">
+      <pre class="code e" style="--i:0;font-size:19px">from torch.utils.data import Sampler
+
+class TokenBudgetSampler(Sampler):
+    def __init__(self, lens, max_tokens=4096):
+        self.lens, self.max_tokens = lens, max_tokens
+
+    def __iter__(self):
+        ordem = torch.randperm(len(self.lens)).tolist()
+        lote, total = [], 0
+        for i in ordem:
+            if lote and total + self.lens[i] &gt; self.max_tokens:
+                yield lote                 # lista de índices
+                lote, total = [], 0
+            lote.append(i)
+            total += self.lens[i]
+        if lote:
+            yield lote
+
+dl = DataLoader(ds, batch_sampler=TokenBudgetSampler(lens),
+                collate_fn=collate_varlen)</pre>
+      <div class="col">
+        <div class="budget e" style="--i:1">
+          <div class="rot" style="margin:0">cada lote: até 4096 tokens</div>
+          <div class="bl"><div class="rot">lote 1</div><div class="bb"><i class="s0" style="flex:900"></i><i class="s1" style="flex:1300"></i><i class="s2" style="flex:1400"></i><i class="s3" style="flex:400"></i><span style="flex:96"></span></div></div>
+          <div class="bl"><div class="rot">lote 2</div><div class="bb"><i class="s1" style="flex:3100"></i><i class="s0" style="flex:900"></i><span style="flex:96"></span></div></div>
+          <div class="bl"><div class="rot">lote 3</div><div class="bb"><i class="s2" style="flex:500"></i><i class="s3" style="flex:700"></i><i class="s0" style="flex:600"></i><i class="s1" style="flex:800"></i><i class="s2" style="flex:650"></i><i class="s3" style="flex:750"></i><span style="flex:96"></span></div></div>
+        </div>
+        <p class="e" style="--i:2">O número de sequências varia, mas o de <span class="destaque">tokens</span> fica quase constante: memória e tempo por passo previsíveis.</p>
+        <p class="e suave" style="--i:3"><code class="i">batch_sampler</code> devolve listas de índices e exclui <code class="i">batch_size</code>, <code class="i">shuffle</code> e <code class="i">sampler</code>. Tire a média da loss por token, não por sequência.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- varlen 4 · atenção com cu_seqlens -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · varlen</div><h2>Atenção que não vaza entre sequências</h2></div>
+    <div class="corpo">
+      <div class="duas" style="grid-template-columns:600px 1fr;gap:60px">
+        <svg class="p" style="--i:0;width:600px;height:640px" id="mascara" viewBox="0 0 600 640"></svg>
+        <div class="col">
+          <p class="e" style="--i:1">Com tudo numa fila só, um token poderia “ver” outra sequência. A máscara correta é <span class="destaque">bloco-diagonal</span>, e causal dentro de cada bloco.</p>
+          <pre class="code e" style="--i:2;font-size:22px">from flash_attn import flash_attn_varlen_func
+
+# q, k, v: [total_tokens, n_heads, head_dim]
+out = flash_attn_varlen_func(
+    q, k, v,
+    cu_seqlens_q=cu, cu_seqlens_k=cu,
+    max_seqlen_q=max_len, max_seqlen_k=max_len,
+    causal=True)</pre>
+          <p class="e suave" style="--i:3">O kernel lê <code class="i">cu</code> e só calcula os blocos laranja: nenhuma operação é gasta nas áreas cinzas. Requer GPU e o pacote <code class="i">flash-attn</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- varlen 5 · flexattention -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · varlen</div><h2>A mesma ideia em PyTorch puro: FlexAttention</h2></div>
+    <div class="corpo" style="display:grid;grid-template-columns:1.15fr 1fr;gap:60px;align-items:center">
+      <pre class="code e" style="--i:0;font-size:22px">from torch.nn.attention.flex_attention import (
+    flex_attention, create_block_mask)
+
+# a qual sequência pertence cada token: [0,0,0,1,1,...,3]
+doc = torch.repeat_interleave(torch.arange(len(lens)), lens)
+
+def doc_causal(b, h, q_idx, kv_idx):
+    mesma_seq = doc[q_idx] == doc[kv_idx]
+    return mesma_seq &amp; (q_idx &gt;= kv_idx)
+
+T = len(doc)
+mask = create_block_mask(doc_causal, None, None, T, T)
+out = flex_attention(q, k, v, block_mask=mask)
+# q, k, v: [1, n_heads, T, head_dim]</pre>
+      <div class="col">
+        <p class="e" style="--i:1">Você escreve a regra da máscara como uma <span class="destaque">função Python</span> de (q_idx, kv_idx). O PyTorch compila um kernel que pula os blocos inteiramente mascarados.</p>
+        <div class="mini e" style="--i:2">
+          <div class="painel"><h4>doc[q] == doc[kv]</h4><p>Só enxerga tokens da mesma sequência.</p></div>
+          <div class="painel"><h4>q_idx &gt;= kv_idx</h4><p>Só enxerga o passado (causal).</p></div>
+        </div>
+        <p class="e suave" style="--i:3">O lote empacotado vira “1 sequência longa” de T tokens. Disponível a partir do PyTorch 2.5.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- varlen 6 · operações por segmento -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">1 · Dados · varlen</div><h2>Operações por sequência, sem padding</h2></div>
+    <div class="corpo" style="display:grid;grid-template-columns:1fr 1fr;gap:60px">
+      <div class="col" style="justify-content:center">
+        <div class="rot e" style="--i:0;margin:0">média por sequência (pooling)</div>
+        <pre class="code e" style="--i:0;font-size:22px">B, d = len(lens), h.shape[1]      # h: [T, d]
+seq_id = torch.repeat_interleave(
+    torch.arange(B), lens)            # [T]
+soma = torch.zeros(B, d).index_add_(0, seq_id, h)
+media = soma / lens[:, None]          # [B, d]</pre>
+        <div class="rot e" style="--i:1;margin:6px 0 0">nested tensors (jagged)</div>
+        <pre class="code e" style="--i:1;font-size:22px">nt = torch.nested.nested_tensor(
+    list(seqs), layout=torch.jagged)
+nt.offsets()                          # = cu_seqlens</pre>
+      </div>
+      <div class="col" style="justify-content:center">
+        <p class="e" style="--i:2">Camadas que agem token a token (Linear, MLP, LayerNorm) funcionam direto no tensor achatado <code class="i">[T, d]</code>. Só o que <span class="destaque">mistura tokens</span> precisa saber das fronteiras.</p>
+        <div class="cmp e" style="--i:3">
+          <div class="painel"><h4>Padding</h4><p>Simples e universal. Bom quando os comprimentos são parecidos.</p></div>
+          <div class="painel"><h4>Varlen</h4><p>Zero desperdício. Padrão no treino de LLMs, onde os comprimentos variam muito.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · modelo -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">2 · Modelo</div><h2>A MLP: 2 → 32 → 32 → 2</h2></div>
+    <div class="corpo">
+      <div class="duas" style="grid-template-columns:840px 1fr;gap:60px">
+        <svg class="p" style="--i:0;width:840px;height:640px" id="rede" viewBox="0 0 840 640"></svg>
+        <div class="col">
+          <pre class="code e" style="--i:1">class MLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.rede = nn.Sequential(
+            nn.Linear(2, 32),  nn.ReLU(),
+            nn.Linear(32, 32), nn.ReLU(),
+            nn.Linear(32, 2),
+        )
+
+    def forward(self, x):
+        return self.rede(x)  # logits</pre>
+          <p class="e" style="--i:2"><span class="destaque">ReLU</span> = max(0, x). Sem ela, empilhar camadas lineares dá só outra camada linear.</p>
+          <p class="e suave" style="--i:3">A saída são 2 <b>logits</b> (notas cruas, uma por classe). Total: 96 + 1056 + 66 = <b>1218 parâmetros</b>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · loss e otimizador -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">3 · Loss e otimizador</div><h2>Medir o erro, corrigir os pesos</h2></div>
+    <div class="corpo">
+      <div class="pares">
+        <div class="painel e" style="--i:0">
+          <h3>CrossEntropyLoss</h3>
+          <p class="suave">Aplica softmax nos logits e pune a baixa probabilidade na classe certa: loss = −log p(classe certa).</p>
+          <div class="conta">
+            <span>logits</span><span class="seta">→</span><span>[ 2.0, −1.0 ]</span>
+            <span>softmax</span><span class="seta">→</span><span>[ 0.95, 0.05 ]</span>
+            <span>se y = 0</span><span class="seta">→</span><span style="color:var(--verde)">loss ≈ 0.05 ✓</span>
+            <span>se y = 1</span><span class="seta">→</span><span style="color:var(--acento)">loss ≈ 3.05 ✗</span>
+          </div>
+          <p class="suave">Por isso o modelo devolve logits sem softmax: a loss já faz essa parte.</p>
+        </div>
+        <div class="painel e" style="--i:1">
+          <h3>Adam</h3>
+          <pre class="code" style="font-size:22px">criterio   = nn.CrossEntropyLoss()
+otimizador = torch.optim.Adam(
+    modelo.parameters(), lr=1e-2)</pre>
+          <p>A cada <code class="i">step()</code>, cada peso anda um pouco na direção que <b>diminui</b> a loss.</p>
+          <p class="suave">O <span class="destaque">lr</span> (taxa de aprendizado) é o tamanho do passo. Alto demais: pula o mínimo. Baixo demais: demora muito.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · loop de treino (clímax) -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">4 · Loop de treino</div><h2>O coração: 5 linhas, repetidas</h2></div>
+    <div class="corpo">
+      <div class="duas" style="grid-template-columns:680px 1fr;gap:70px">
+        <svg class="p" style="--i:0;width:680px;height:680px" id="ciclo" viewBox="0 0 660 660"></svg>
+        <div class="col">
+          <pre class="code e" style="--i:1">for epoca in range(1, 21):
+    modelo.train()
+    for xb, yb in train_dl:
+        logits = modelo(xb)          # (a)
+        loss = criterio(logits, yb)  # (b)
+        otimizador.zero_grad()       # (c)
+        loss.backward()              # (d)
+        otimizador.step()            # (e)</pre>
+          <p class="e" style="--i:2"><b>(c)</b> vem antes de <b>(d)</b> porque o PyTorch <span class="destaque">acumula</span> gradientes: sem zerar, somaria os do lote anterior.</p>
+          <p class="e suave" style="--i:3">20 épocas × 25 lotes = 500 voltas neste ciclo, ou seja, 500 atualizações de pesos.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · avaliação -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">5 · Uso</div><h2>Avaliar: quantos acertos?</h2></div>
+    <div class="corpo" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
+      <pre class="code e" style="--i:0;font-size:23px">def avaliar(dl):
+    modelo.eval()
+    acertos, total = 0, 0
+    with torch.no_grad():
+        for xb, yb in dl:
+            pred = modelo(xb).argmax(dim=1)
+            acertos += (pred == yb).sum().item()
+            total += yb.size(0)
+    return acertos / total</pre>
+      <div class="col">
+        <div class="fluxo e" style="--i:1">
+          <span class="tag">[0.3, 2.1]</span><span class="seta">→</span><span class="tag">argmax</span><span class="seta">→</span><span class="tag">1</span><span class="seta">→</span><span class="tag">== y ?</span>
+        </div>
+        <div class="modos e" style="--i:2">
+          <div class="painel"><h4>eval()</h4><p>Modo avaliação. Muda o comportamento de Dropout e BatchNorm (aqui não há, mas é o hábito certo).</p></div>
+          <div class="painel"><h4>no_grad()</h4><p>Não guarda o grafo de gradientes: mais rápido e usa menos memória.</p></div>
+        </div>
+        <p class="e" style="--i:3">Compare <b>acc treino</b> com <b>acc val</b>. Se treino ≫ validação, a rede está <span class="destaque">decorando</span> (overfitting).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · inferência -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">5 · Uso</div><h2>Prever pontos novos</h2></div>
+    <div class="corpo">
+      <div class="duas" style="grid-template-columns:640px 1fr;gap:70px">
+        <svg class="p" style="--i:0;width:640px;height:640px" id="novos" viewBox="0 0 640 640"></svg>
+        <div class="col">
+          <pre class="code e" style="--i:1;font-size:23px">modelo.eval()
+pontos = torch.tensor([[0.0, 0.0],
+                       [1.8, 1.8],
+                       [0.5, -0.7]])
+with torch.no_grad():
+    probs = torch.softmax(modelo(pontos), dim=1)</pre>
+          <div class="resultado e" style="--i:2">
+            <span class="l">A</span><span>(0, 0) · r² = 0</span><div class="trilha"><i style="--w:96%"></i></div>
+            <span class="l">B</span><span>(1.8, 1.8) · r² = 6.5</span><div class="trilha"><i style="--w:4%"></i></div>
+            <span class="l">C</span><span>(0.5, −0.7) · r² = 0.74</span><div class="trilha"><i style="--w:90%"></i></div>
+          </div>
+          <p class="e suave" style="--i:3" >Barras = P(dentro) <b>esperada</b>. Rode o script para ver os valores reais do seu modelo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · experimentos -->
+  <section class="secao">
+    <div class="cab"><div class="kicker">Para estudar</div><h2>Quebre o código de propósito</h2></div>
+    <div class="corpo">
+      <div class="quatro">
+        <div class="painel e" style="--i:0"><h3>Tire os <code class="i">nn.ReLU()</code></h3><p>A rede vira linear e não consegue desenhar um círculo. A acurácia empaca perto de 70%, que é o mesmo que chutar sempre “fora”.</p></div>
+        <div class="painel e" style="--i:1"><h3>Mude o <code class="i">lr</code></h3><p>Com 1e-4 aprende muito devagar em 20 épocas. Com 1.0 a loss oscila ou explode.</p></div>
+        <div class="painel e" style="--i:2"><h3>Comente o <code class="i">zero_grad()</code></h3><p>Os gradientes se somam lote após lote, os passos crescem e o treino fica instável.</p></div>
+        <div class="painel e" style="--i:3"><h3>Mude <code class="i">oculta</code> para 4 ou 128</h3><p>Com 4 neurônios a fronteira fica poligonal. Com 128 aprende rápido, mas tem mais capacidade para decorar.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="rodape">
+    <span>mlp_treino.py</span>
+    <div class="nav">
+      <span id="contador">1 / 22</span>
+      <button id="ant" aria-label="Slide anterior">←</button>
+      <button id="prox" aria-label="Próximo slide">→</button>
+    </div>
+  </div>
+  <div class="progresso"></div>
+</div>
+</div>
+
+<script>
+(function(){
+  /* ---------- realce de sintaxe Python (simples) ---------- */
+  var KW = new Set('import from as class def return for in with if else super not and or yield while is lambda'.split(' '));
+  var BI = new Set('print range zip int len True False None self'.split(' '));
+  var PASSO = {a:0,b:1,c:2,d:3,e:4};
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  function linha(l){
+    var q=null, ci=-1;
+    for(var i=0;i<l.length;i++){var c=l[i];
+      if(q){if(c===q)q=null}else if(c==='"'||c==="'")q=c;else if(c==='#'){ci=i;break}}
+    var cod = ci<0?l:l.slice(0,ci), com = ci<0?'':l.slice(ci);
+    var out = cod.replace(/("[^"]*"|'[^']*')|(\b\d+(?:\.\d+)?(?:e-?\d+)?\b)|([A-Za-z_]\w*)(\s*\()?|([^"'\w]+|["'])/g,
+      function(m,s,n,id,par,o){
+        if(s) return '<span class="s">'+esc(s)+'</span>';
+        if(n) return '<span class="n">'+n+'</span>';
+        if(id){var c=KW.has(id)?'k':BI.has(id)?'b':par?'f':'';
+          return (c?'<span class="'+c+'">'+id+'</span>':id)+(par?esc(par):'');}
+        return esc(o);
+      });
+    var m = com.match(/# \(([a-e])\)/);
+    var attr = m ? ' data-p style="--k:'+PASSO[m[1]]+'"' : '';
+    return '<span class="ln"'+attr+'>'+(out||(com?'':' '))+(com?'<span class="c">'+esc(com)+'</span>':'')+'</span>';
+  }
+  document.querySelectorAll('pre.code').forEach(function(pre){
+    pre.innerHTML = pre.textContent.split('\n').map(linha).join('');
+  });
+
+  /* ---------- dispersão do círculo ---------- */
+  function rng(s){return function(){s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296}}
+  var R = Math.sqrt(1.5);
+  function plano(S, grade){
+    var m=function(v){return (v+2)/4*S};
+    var h='<rect class="plano" x="1" y="1" width="'+(S-2)+'" height="'+(S-2)+'" rx="18"/>';
+    if(grade){[-1,0,1].forEach(function(v){
+      h+='<line class="grade" x1="'+m(v)+'" y1="0" x2="'+m(v)+'" y2="'+S+'"/><line class="grade" x1="0" y1="'+m(v)+'" x2="'+S+'" y2="'+m(v)+'"/>';});}
+    return {h:h,m:m};
+  }
+  document.querySelectorAll('[data-scatter]').forEach(function(svg){
+    var S=640, n=+svg.dataset.scatter, r=rng(7), p=plano(S,true), h=p.h;
+    for(var i=0;i<n;i++){var x=r()*4-2,y=r()*4-2,d=x*x+y*y<1.5;
+      h+='<circle class="'+(d?'dentro':'fora')+'" cx="'+p.m(x).toFixed(1)+'" cy="'+p.m(-y).toFixed(1)+'" r="5"/>';}
+    h+='<circle class="borda" cx="320" cy="320" r="'+(R/4*S).toFixed(1)+'"/>';
+    svg.innerHTML=h;
+  });
+
+  /* pontos novos */
+  (function(){
+    var svg=document.getElementById('novos'), p=plano(640,true), h=p.h;
+    h+='<circle class="borda" cx="320" cy="320" r="'+(R/4*640).toFixed(1)+'"/>';
+    [['A',0,0],['B',1.8,1.8],['C',0.5,-0.7]].forEach(function(q){
+      var x=p.m(q[1]), y=p.m(-q[2]);
+      h+='<circle class="marca" cx="'+x+'" cy="'+y+'" r="13"/><text class="marca-txt" x="'+(x+20)+'" y="'+(y-14)+'">'+q[0]+'</text>';});
+    svg.innerHTML=h;
+  })();
+
+  /* lotes */
+  var lotes=document.getElementById('lotes'), lh='';
+  for(var j=0;j<25;j++) lh+='<div class="lote" style="--j:'+j+'"></div>';
+  lotes.innerHTML=lh;
+
+  /* rede neural */
+  (function(){
+    var svg=document.getElementById('rede');
+    var camadas=[{n:2,r:'entrada · 2'},{n:7,r:'oculta · 32'},{n:7,r:'oculta · 32'},{n:2,r:'saída · 2'}];
+    var xs=[90,330,570,780], top=60, alt=460, pos=[], h='';
+    camadas.forEach(function(c,L){var ps=[];for(var i=0;i<c.n;i++){ps.push([xs[L], top+alt*(i+.5)/c.n + (c.n===2?0:0)]);}pos.push(ps);});
+    pos.forEach(function(ps,L){ if(L<3) ps.forEach(function(a){pos[L+1].forEach(function(b){
+      h+='<line class="aresta" x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"/>';});});});
+    pos.forEach(function(ps,L){ps.forEach(function(a){
+      h+='<circle class="no" style="--L:'+L+'" cx="'+a[0]+'" cy="'+a[1]+'" r="20"/>';});
+      h+='<text class="svgtxt" text-anchor="middle" x="'+xs[L]+'" y="580">'+camadas[L].r+'</text>';});
+    ['Linear + ReLU','Linear + ReLU','Linear'].forEach(function(t,L){
+      h+='<text class="svgtxt" text-anchor="middle" x="'+((xs[L]+xs[L+1])/2)+'" y="30" style="fill:var(--acento);font-weight:700">'+t+'</text>';});
+    h+='<text class="svgtxt" text-anchor="middle" x="330" y="615" style="font-size:17px">(7 de 32 neurônios desenhados)</text>';
+    svg.innerHTML=h;
+  })();
+
+  /* ciclo do treino */
+  (function(){
+    var svg=document.getElementById('ciclo'), c=330, R=240, h='';
+    var nos=[['forward','prever'],['loss','medir o erro'],['zero_grad','limpar gradientes'],['backward','calcular gradientes'],['step','atualizar pesos']];
+    h+='<circle class="borda" style="stroke:var(--suave);stroke-width:2.5" cx="'+c+'" cy="'+c+'" r="'+R+'"/>';
+    h+='<g class="orbita"><circle cx="'+c+'" cy="'+(c-R)+'" r="14" style="fill:var(--acento)"/></g>';
+    nos.forEach(function(n,k){
+      var a=(-90+k*72)*Math.PI/180, x=c+R*Math.cos(a), y=c+R*Math.sin(a);
+      h+='<rect class="ciclo-no" style="--k:'+k+'" x="'+(x-92)+'" y="'+(y-40)+'" width="184" height="80" rx="40"/>';
+      h+='<text class="ciclo-txt" x="'+x+'" y="'+(y-2)+'">('+'abcde'[k]+') '+n[0]+'</text>';
+      h+='<text class="ciclo-sub" x="'+x+'" y="'+(y+24)+'">'+n[1]+'</text>';
+    });
+    h+='<text class="svgtxt" text-anchor="middle" x="'+c+'" y="'+(c-6)+'" style="font-size:26px;font-weight:700;fill:var(--texto)">1 lote</text>';
+    h+='<text class="svgtxt" text-anchor="middle" x="'+c+'" y="'+(c+26)+'">64 pontos</text>';
+    svg.innerHTML=h;
+  })();
+
+
+  /* varlen */
+  (function(){
+    var LENS=[3,7,2,5], COR=['s0','s1','s2','s3'];
+    var h=''; LENS.forEach(function(L,r){for(var c=0;c<7;c++) h+= c<L?'<div class="cel '+COR[r]+'">'+c+'</div>':'<div class="cel pad">·</div>';});
+    document.getElementById('gpad').innerHTML=h;
+    var f='', cu=[0]; LENS.forEach(function(L,r){for(var c=0;c<L;c++) f+='<div class="cel '+COR[r]+'">'+c+'</div>'; cu.push(cu[cu.length-1]+L);});
+    cu.forEach(function(b){ f+='<div class="marco" style="left:'+(b*90-3+(b===17?0:0))+'px"><span>'+b+'</span></div>'; });
+    f+='<div class="marco" style="left:1560px;border:none"><span style="width:260px;left:0;text-align:left;color:var(--acento)">← cu_seqlens</span></div>';
+    document.getElementById('faixa').innerHTML=f;
+    // máscara bloco-diagonal causal
+    var svg=document.getElementById('mascara'), T=17, sz=30, ox=60, oy=40, m='';
+    var doc=[]; LENS.forEach(function(L,r){for(var c=0;c<L;c++)doc.push(r)});
+    for(var q=0;q<T;q++)for(var k=0;k<T;k++){
+      var on = doc[q]===doc[k] && q>=k;
+      m+='<rect class="'+(on?'mcel-on':'mcel-off')+'" x="'+(ox+k*sz)+'" y="'+(oy+q*sz)+'" width="'+(sz-3)+'" height="'+(sz-3)+'" rx="4"/>';}
+    m+='<text class="svgtxt" x="'+(ox+T*sz/2)+'" y="24" text-anchor="middle">chaves (kv_idx) →</text>';
+    m+='<text class="svgtxt" transform="translate(30,'+(oy+T*sz/2)+') rotate(-90)" text-anchor="middle">consultas (q_idx) →</text>';
+    m+='<text class="svgtxt" x="'+(ox+T*sz/2)+'" y="'+(oy+T*sz+40)+'" text-anchor="middle">17 tokens · 4 sequências</text>';
+    svg.innerHTML=m;
+  })();
+
+  /* ---------- navegação ---------- */
+  var vp=document.getElementById('vp'), palco=document.getElementById('palco');
+  var secs=[].slice.call(document.querySelectorAll('.secao'));
+  var chips=[].slice.call(document.querySelectorAll('.chip'));
+  var TRILHO=[-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,4,-1];
+  var atual=0;
+  function ajusta(){
+    var k=Math.min(vp.clientWidth/1920, vp.clientHeight/1080);
+    palco.style.setProperty('--k',k);
+  }
+  function render(){
+    var t=TRILHO[atual];
+    palco.dataset.trilho = t<0?'off':'on';
+    if(t>=0) palco.style.setProperty('--r',t);
+    chips.forEach(function(ch,i){ch.classList.toggle('ativo',i===t)});
+    palco.style.setProperty('--prog',(atual+1)/secs.length);
+    document.getElementById('contador').textContent=(atual+1)+' / '+secs.length;
+    document.getElementById('ant').disabled = atual===0;
+    document.getElementById('prox').disabled = atual===secs.length-1;
+  }
+  function ir(n){
+    n=Math.max(0,Math.min(secs.length-1,n)); if(n===atual) return;
+    palco.dataset.dir = n>atual?'fwd':'back';
+    secs[atual].removeAttribute('data-on'); secs[n].setAttribute('data-on','');
+    atual=n; palco.dataset.passo=n; render();
+  }
+  addEventListener('keydown',function(e){
+    if(['ArrowRight','PageDown',' ','Enter'].indexOf(e.key)>=0){e.preventDefault();ir(atual+1)}
+    else if(['ArrowLeft','PageUp','Backspace'].indexOf(e.key)>=0){e.preventDefault();ir(atual-1)}
+    else if(e.key==='Home')ir(0); else if(e.key==='End')ir(secs.length-1);
+  });
+  document.getElementById('ant').addEventListener('click',function(e){e.stopPropagation();ir(atual-1)});
+  document.getElementById('prox').addEventListener('click',function(e){e.stopPropagation();ir(atual+1)});
+  var tx=null, ty=null, swipe=false;
+  vp.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY;swipe=false},{passive:true});
+  vp.addEventListener('touchend',function(e){
+    if(tx===null)return; var dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){swipe=true; ir(atual+(dx<0?1:-1));} tx=null;
+  },{passive:true});
+  vp.addEventListener('click',function(e){
+    if(swipe){swipe=false;return}
+    if(e.target.closest('button'))return;
+    ir(atual + (e.clientX < vp.clientWidth*0.35 ? -1 : 1));
+  });
+  addEventListener('resize',ajusta,{passive:true});
+  ajusta(); render();
+})();
+</script>
+</body>
+</html>
