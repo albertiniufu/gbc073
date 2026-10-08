@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>O ritmo do aprendizado — slides sobre LR schedulers no PyTorch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F8;--paper:#FFFFFF;--ink:#16223A;--muted:#5A6680;--line:#D6DCE6;--soft:#E6EAF1;
+  --c1:#2C55E6;--c2:#D12F6B;--c3:#0C8C7E;--c4:#C98A00;--c5:#7A4FD8;--c6:#6B7A90;--c7:#2E8F3E;--c8:#1D8FC4;--c9:#A0522D;
+  --code-bg:#101B35;--code-ink:#DCE4F5;--map-lo:#EEF2FB;--map-hi:#1E3478;--ok:#0C8C7E;--bad:#D12F6B;
+  --letterbox:#0E1628;
+  --serif:"Newsreader",Georgia,"Times New Roman",serif;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --ease-morph:cubic-bezier(0.16,1,0.3,1);--ease-out:cubic-bezier(0.2,0.75,0.2,1);--ease-soft:cubic-bezier(0.4,0,0.2,1);
+  --dur-morph:780ms;--dur-fade:420ms;--stag:60ms;
+}
+[data-dir="back"]{--dur-morph:520ms;--dur-fade:280ms}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--letterbox)}
+body{color:var(--ink);font:400 24px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+.viewport{position:fixed;inset:0;overflow:hidden;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.palco{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale(var(--k,1));transform-origin:50% 50%;background:var(--bg);overflow:hidden}
+:focus-visible{outline:3px solid var(--c1);outline-offset:3px}
+h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0;line-height:1.08}
+p{margin:0}
+code{font-family:var(--mono);font-size:.84em;background:var(--soft);padding:1px 7px;border-radius:5px}
+a.doc{color:inherit;text-decoration:none}
+a.doc code{color:var(--c1);box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--c1) 40%,transparent)}
+a.doc:hover code{background:color-mix(in srgb,var(--c1) 14%,transparent)}
+
+/* slides: fronteira sem corte (visibility + opacity) */
+.slide{position:absolute;inset:0;visibility:hidden;opacity:0;transition:opacity 300ms var(--ease-soft),visibility 0s 300ms}
+.slide[data-on]{visibility:visible;opacity:1;transition:opacity 300ms var(--ease-soft),visibility 0s}
+.palco[data-dir="fwd"] .slide[data-on] .rise{animation:subir 560ms var(--ease-out) both;animation-delay:calc(90ms + var(--i,0) * var(--stag))}
+@keyframes subir{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+.frag{transition:opacity var(--dur-fade) var(--ease-soft),transform var(--dur-morph) var(--ease-morph),filter var(--dur-fade) var(--ease-soft)}
+.frag:not([data-shown]){opacity:0;transform:translateY(18px)}
+
+.head{position:absolute;left:120px;right:120px;top:84px}
+.head h2{font-size:68px;letter-spacing:-.01em}
+.head .sub{font-size:26px;color:var(--muted);margin-top:14px;max-width:62ch}
+.body{position:absolute;left:120px;right:120px;top:270px;bottom:120px}
+
+/* rodapé reservado: 1000–1080 */
+.foot{position:absolute;left:120px;right:120px;bottom:30px;height:44px;display:flex;align-items:center;gap:28px;font-size:18px;color:var(--muted);z-index:5}
+.foot .sec{min-width:240px}
+.foot .bar{flex:1;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.foot .bar i{display:block;height:100%;background:var(--c1);transform-origin:left;transform:scaleX(var(--p,0));transition:transform var(--dur-morph) var(--ease-morph)}
+.foot .count{font-family:var(--mono);font-size:17px;font-variant-numeric:tabular-nums;min-width:74px;text-align:right}
+.navb{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.navb:hover{border-color:var(--c1);color:var(--c1)}
+.navb:disabled{opacity:.35;cursor:default}
+
+/* título */
+.title{position:absolute;left:120px;right:120px;top:250px}
+.title h1{font-size:176px;letter-spacing:-.025em;line-height:.98}
+.title p{font-family:var(--serif);font-size:40px;line-height:1.3;color:var(--muted);margin-top:40px;max-width:30ch}
+.title .hint{font-family:var(--sans);font-size:20px;color:var(--muted);margin-top:70px}
+.kbd{font-family:var(--mono);font-size:16px;border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;padding:1px 8px;background:var(--paper);color:var(--ink)}
+
+/* controles */
+.ctrl{display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 12px}
+.ctrl label{font-family:var(--mono);font-size:17px}
+.ctrl output{font-family:var(--mono);font-size:17px;color:var(--c1);font-variant-numeric:tabular-nums}
+.ctrl input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--c1);margin:6px 0 0;height:24px}
+.ctrl select{grid-column:1/-1;font:inherit;font-size:17px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink);margin-top:4px}
+button{font:inherit;cursor:pointer}
+.chip{border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:6px 16px;font-family:var(--mono);font-size:17px}
+.chip[aria-pressed="true"]{background:var(--c1);border-color:var(--c1);color:#fff}
+.chip.sw{display:inline-flex;align-items:center;gap:9px}
+.chip.sw i{width:12px;height:12px;border-radius:50%;background:var(--col)}
+.chip.sw[aria-pressed="true"]{background:color-mix(in srgb,var(--col) 15%,transparent);border-color:var(--col);color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.btn{border:1.5px solid var(--ink);background:var(--ink);color:var(--bg);padding:10px 24px;border-radius:999px;font-size:20px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+canvas{display:block;width:100%}
+.readout{font-family:var(--mono);font-size:17px;color:var(--muted);min-height:26px;margin-top:8px}
+.tip{border-left:4px solid var(--c4);padding:4px 0 4px 18px;font-size:20px;line-height:1.45}
+
+/* parábola */
+.para{display:grid;grid-template-columns:600px 1fr;gap:80px;height:100%}
+.regime{font-family:var(--serif);font-size:56px;margin:34px 0 16px}
+.regimeTxt{font-size:22px;color:var(--muted);min-height:100px}
+
+/* explorar / assentar */
+.phases{display:grid;grid-template-columns:520px 1fr;gap:80px;height:100%}
+.phase{padding:0 0 30px;margin-bottom:30px;border-bottom:1px solid var(--line)}
+.phase h3{font-size:44px;margin-bottom:12px}
+.phase p{font-size:22px;color:var(--muted)}
+
+/* mecânica */
+.mech{display:grid;grid-template-columns:1020px 1fr;gap:70px}
+.codebox{position:relative;background:var(--code-bg);color:var(--code-ink);border-radius:16px;overflow:hidden}
+.codebox pre{position:relative;margin:0;padding:26px 30px;font:21px/36px var(--mono);overflow-x:auto;z-index:1;scrollbar-width:none}
+.hlbar{position:absolute;left:0;right:0;top:26px;height:36px;background:rgba(115,147,255,.2);border-left:4px solid #8FB4FF;transform:translateY(calc(var(--line,4) * 36px));transition:transform var(--dur-morph) var(--ease-morph)}
+.points{display:flex;flex-direction:column;gap:30px;padding-top:6px}
+.point{transition:opacity var(--dur-fade) var(--ease-soft),filter var(--dur-fade)}
+.point:not(.on){opacity:.32}
+.point h3{font-family:var(--sans);font-size:26px;font-weight:600;margin-bottom:6px}
+.point p{font-size:21px;color:var(--muted)}
+.k{color:#FF8DB3}.s{color:#9BE3B0}.n{color:#FFCB6B}.c{color:#7D8BA8;font-style:italic}.f{color:#8FB4FF}
+
+/* famílias */
+.fams{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-top:2px solid var(--ink);height:600px}
+.fams > div{padding:30px 28px 0 0;border-right:1px solid var(--line);margin-right:28px}
+.fams > div:last-child{border-right:0;margin-right:0}
+.fams .n{font-family:var(--serif);font-size:30px;color:var(--c1);font-style:normal}
+.fams h3{font-size:44px;margin:14px 0 16px}
+.fams p{font-size:20px;color:var(--muted);margin-bottom:18px}
+.fams code{display:inline-block;font-size:16px;margin:0 6px 8px 0}
+.fams svg{width:100%;height:90px;margin-bottom:16px}
+
+/* laboratório */
+.lab{display:grid;grid-template-columns:560px 1fr;gap:64px;height:100%}
+.sname{font-family:var(--mono);font-size:38px;font-weight:500;margin:26px 0 10px}
+.sname a{color:var(--ink);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--c1) 50%,transparent);text-underline-offset:6px;text-decoration-thickness:3px}
+.sname a:hover{color:var(--c1)}
+.sname a::after{content:" ↗";font-size:.6em;color:var(--muted)}
+.gran{display:inline-block;font-size:16px;padding:3px 12px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.desc{font-size:20px;line-height:1.45;margin:14px 0 12px}
+.formula{font-family:var(--mono);font-size:16px;background:var(--soft);padding:10px 14px;border-radius:9px;overflow-x:auto;white-space:nowrap}
+.params{display:grid;grid-template-columns:1fr 1fr;gap:16px 28px;margin-top:22px}
+.lab-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.tabs{display:flex;gap:6px}
+.tab{border:none;background:transparent;color:var(--muted);font-size:19px;padding:6px 14px;border-radius:8px}
+.tab[aria-selected="true"]{background:var(--soft);color:var(--ink);font-weight:500}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-size:18px;color:var(--muted);cursor:pointer}
+.toggle input{width:18px;height:18px}
+.view{height:470px;position:relative}
+.view .codebox{height:470px;overflow:auto}
+.view .codebox pre{font-size:17px;line-height:29px}
+.stats{display:flex;gap:34px;font-size:18px;color:var(--muted);margin:6px 0 18px}
+.stats b{font-family:var(--mono);font-weight:500;color:var(--ink)}
+
+/* corrida */
+.race{display:grid;grid-template-columns:1120px 1fr;gap:56px}
+.race-ctrls{display:grid;grid-template-columns:1fr 1fr;gap:20px 36px;margin:22px 0}
+.res{display:grid;grid-template-columns:210px 1fr 96px;gap:14px;align-items:center;font-size:19px;margin-bottom:10px}
+.res .bar{height:12px;border-radius:6px;background:var(--col);transform-origin:left;transition:transform .6s var(--ease-out)}
+.res .val{font-family:var(--mono);text-align:right;font-size:17px}
+
+/* tabela */
+table{border-collapse:collapse;width:100%;font-size:23px}
+th,td{text-align:left;padding:17px 24px 17px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;font-size:19px;color:var(--muted)}
+td:last-child{color:var(--muted)}
+
+/* pegadinhas */
+.pits{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.pits article{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 28px;min-height:280px}
+.pits h3{font-family:var(--sans);font-size:24px;font-weight:600;margin-bottom:10px}
+.pits p{font-size:19px;color:var(--muted);line-height:1.45}
+.pits .codebox{margin-top:14px;border-radius:10px}
+.pits .codebox pre{font-size:15px;line-height:24px;padding:12px 16px}
+
+/* quiz */
+.quiz{max-width:1300px}
+.qnum{font-family:var(--mono);font-size:18px;color:var(--muted)}
+.qtext{font-family:var(--serif);font-size:46px;line-height:1.2;margin:14px 0 38px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.opt{text-align:left;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);border-radius:12px;padding:20px 24px;font-size:22px;min-height:84px}
+.opt:hover:not(:disabled){border-color:var(--c1)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--paper))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--paper))}
+.opt:disabled{cursor:default}
+.why{font-size:22px;margin-top:28px;min-height:70px}
+.qfoot{display:flex;align-items:center;gap:24px;margin-top:10px}
+.score{font-family:var(--serif);font-size:30px}
+
+/* fim */
+.take{display:grid;grid-template-columns:repeat(3,1fr);gap:56px;margin-bottom:70px}
+.take h3{font-size:40px;margin-bottom:14px}
+.take p{font-size:21px;color:var(--muted)}
+.docs code{display:inline-block;margin:0 10px 12px 0;font-size:18px}
+
+@media (prefers-reduced-motion:reduce){
+  :root,[data-dir="back"]{--dur-morph:1ms;--dur-fade:150ms;--stag:0ms}
+  *,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}
+}
+</style>
+</head>
+<body>
+<div class="viewport">
+<div class="palco" id="palco" data-dir="fwd">
+
+<!-- 1 título -->
+<section class="slide" data-sec="Abertura">
+  <div class="title">
+    <h1 class="rise">O ritmo do<br>aprendizado</h1>
+    <p class="rise" style="--i:1">Learning rate schedulers no PyTorch: o que cada um faz, como se comporta e quando escolher.</p>
+    <p class="hint rise" style="--i:2">Avance com <span class="kbd">→</span> ou <span class="kbd">espaço</span>. Tela cheia com <span class="kbd">F</span>.</p>
+  </div>
+</section>
+
+<!-- 2 parábola -->
+<section class="slide" data-sec="Fundamentos">
+  <div class="head"><h2 class="rise">Qual o tamanho do passo?</h2>
+    <p class="sub rise" style="--i:1">Em <code>f(x) = x²</code>, cada passo de gradiente multiplica <code>x</code> por <code>(1 − 2·lr)</code>. Arraste o controle.</p></div>
+  <div class="body"><div class="para">
+    <div class="rise" style="--i:2">
+      <div class="ctrl"><label for="plr">lr</label><output id="plrv">0.15</output><input type="range" id="plr" min="0.01" max="1.1" step="0.01" value="0.15"></div>
+      <p class="regime" id="regime"></p>
+      <p class="regimeTxt" id="regimeTxt"></p>
+      <p class="tip" style="margin-top:28px">Experimente 0.05, 0.5, 0.8, 1.0 e 1.05. O limite de estabilidade é lr = 2 / curvatura.</p>
+    </div>
+    <canvas id="para" class="rise" style="--i:3;height:640px"></canvas>
+  </div></div>
+</section>
+
+<!-- 3 explorar / assentar -->
+<section class="slide" data-sec="Fundamentos" data-steps="2">
+  <div class="head"><h2 class="rise">O lr ideal muda durante o treino</h2>
+    <p class="sub rise" style="--i:1">Um scheduler é só uma regra que reescreve o lr ao longo do tempo.</p></div>
+  <div class="body"><div class="phases">
+    <div>
+      <div class="phase frag" data-f="1"><h3>Explorar cedo</h3><p>Longe de qualquer mínimo bom, passos grandes atravessam regiões ruins e buracos rasos. Um aquecimento curto evita que os primeiros passos, com gradientes ainda instáveis, explodam.</p></div>
+      <div class="phase frag" data-f="2"><h3>Assentar tarde</h3><p>Perto do mínimo, o ruído dos mini-batches faz o otimizador tremer em volta dele. Reduzir o lr diminui o tremor e deixa os pesos se acomodarem.</p></div>
+    </div>
+    <canvas id="ideal" style="height:640px"></canvas>
+  </div></div>
+</section>
+
+<!-- 4 mecânica -->
+<section class="slide" data-sec="Mecânica" data-steps="3">
+  <div class="head"><h2 class="rise">A mecânica no PyTorch</h2>
+    <p class="sub rise" style="--i:1">O scheduler não toca nos pesos: só reescreve o <code>lr</code> em <code>optimizer.param_groups</code>.</p></div>
+  <div class="body"><div class="mech">
+    <div class="codebox rise" style="--i:2"><div class="hlbar" id="hlbar"></div><pre data-hl>import torch
+from torch.optim.lr_scheduler import CosineAnnealingLR
+
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+scheduler = CosineAnnealingLR(optimizer, T_max=100)
+
+for epoch in range(100):
+    for x, y in train_loader:
+        optimizer.zero_grad()
+        loss_fn(model(x), y).backward()
+        optimizer.step()
+    scheduler.step()
+    print(epoch, scheduler.get_last_lr())</pre></div>
+    <div class="points rise" style="--i:3">
+      <div class="point" data-p="0"><h3>O scheduler embrulha o otimizador</h3><p>Ele lê o lr inicial de cada grupo de parâmetros e passa a controlá-lo.</p></div>
+      <div class="point" data-p="1"><h3>Primeiro <code>optimizer.step()</code></h3><p>Os pesos são atualizados com o lr atual.</p></div>
+      <div class="point" data-p="2"><h3>Depois <code>scheduler.step()</code></h3><p>Calcula o próximo lr. A unidade de tempo é sua: aqui é por época; dentro do loop interno seria por batch.</p></div>
+      <div class="point" data-p="3"><h3>Ele tem estado</h3><p>Leia o lr com <code>get_last_lr()</code> e salve <code>scheduler.state_dict()</code> no checkpoint.</p></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- 5 famílias -->
+<section class="slide" data-sec="Famílias">
+  <div class="head"><h2 class="rise">Quinze classes, cinco ideias</h2></div>
+  <div class="body" style="top:230px"><div class="fams" id="fams"></div></div>
+</section>
+
+<!-- 6–10 laboratórios -->
+<section class="slide" data-sec="Decaimento"><div class="head"><h2 class="rise">Decaimento: o lr só desce</h2></div><div class="body" style="top:210px"><div class="lab rise" style="--i:1" data-lab="StepLR,MultiStepLR,ExponentialLR,PolynomialLR,CosineAnnealingLR" data-start="CosineAnnealingLR"></div></div></section>
+<section class="slide" data-sec="Aquecimento"><div class="head"><h2 class="rise">Aquecimento: começar devagar</h2></div><div class="body" style="top:210px"><div class="lab rise" style="--i:1" data-lab="LinearLR,ConstantLR,LambdaLR,MultiplicativeLR" data-start="LinearLR"></div></div></section>
+<section class="slide" data-sec="Cíclicos"><div class="head"><h2 class="rise">Cíclicos: subir de propósito</h2></div><div class="body" style="top:210px"><div class="lab rise" style="--i:1" data-lab="OneCycleLR,CyclicLR,CosineAnnealingWarmRestarts" data-start="OneCycleLR"></div></div></section>
+<section class="slide" data-sec="Reativo"><div class="head"><h2 class="rise">Reativo: ouvir a validação</h2></div><div class="body" style="top:210px"><div class="lab rise" style="--i:1" data-lab="ReduceLROnPlateau" data-start="ReduceLROnPlateau"></div></div></section>
+<section class="slide" data-sec="Composição"><div class="head"><h2 class="rise">Composição: montar cronogramas</h2></div><div class="body" style="top:210px"><div class="lab rise" style="--i:1" data-lab="SequentialLR,ChainedScheduler" data-start="SequentialLR"></div></div></section>
+
+<!-- 11 comparação -->
+<section class="slide" data-sec="Comparação">
+  <div class="head"><h2 class="rise">Lado a lado</h2>
+    <p class="sub rise" style="--i:1">Cada curva normalizada pelo próprio pico, em 100 passos: só a forma importa.</p></div>
+  <div class="body" style="top:290px">
+    <div class="chips rise" id="cmpPick" style="--i:2;margin-bottom:22px"></div>
+    <canvas id="cmpChart" class="rise" style="--i:3;height:530px"></canvas>
+    <div class="readout" id="cmpRead">&nbsp;</div>
+  </div>
+</section>
+
+<!-- 12 corrida -->
+<section class="slide" data-sec="Corrida">
+  <div class="head"><h2 class="rise">Corrida no relevo</h2>
+    <p class="sub rise" style="--i:1">Mesmo ponto de partida, mesmo ruído, 120 passos de SGD. Só o scheduler muda.</p></div>
+  <div class="body" style="top:270px"><div class="race">
+    <div class="rise" style="--i:2">
+      <canvas id="race" style="height:560px;border-radius:12px"></canvas>
+      <p style="font-size:17px;color:var(--muted);margin-top:10px">Círculo: partida. Estrela: mínimo global. Mais escuro, menor a perda.</p>
+    </div>
+    <div class="rise" style="--i:3">
+      <div class="chips" id="racePick"></div>
+      <div class="race-ctrls">
+        <div class="ctrl"><label for="raceLr">lr máximo</label><output id="raceLrV">0.50</output><input type="range" id="raceLr" min="0.05" max="0.75" step="0.01" value="0.5"></div>
+        <div class="ctrl"><label for="raceNoise">ruído</label><output id="raceNoiseV">1.0</output><input type="range" id="raceNoise" min="0" max="2.5" step="0.1" value="1"></div>
+      </div>
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:24px"><button class="btn" id="raceGo">Iniciar corrida</button><button class="btn ghost" id="raceSeed">Trocar o ruído</button></div>
+      <div id="raceRes"></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- 13 escolher -->
+<section class="slide" data-sec="Escolha">
+  <div class="head"><h2 class="rise">Por onde começar</h2></div>
+  <div class="body" style="top:220px"><table class="rise" style="--i:1">
+    <thead><tr><th>Situação</th><th>Ponto de partida</th><th>Por quê</th></tr></thead>
+    <tbody>
+      <tr><td>Número fixo de épocas, visão computacional</td><td><code>CosineAnnealingLR</code></td><td>Suave, robusto, um hiperparâmetro</td></tr>
+      <tr><td>Transformers e modelos grandes</td><td><code>LinearLR</code> → <code>CosineAnnealingLR</code></td><td>Aquecimento estabiliza o Adam no início</td></tr>
+      <tr><td>Orçamento curto, treinar rápido</td><td><code>OneCycleLR</code></td><td>Explora alto e termina muito baixo</td></tr>
+      <tr><td>Não sabe quantas épocas precisa</td><td><code>ReduceLROnPlateau</code></td><td>Reage à validação, não ao calendário</td></tr>
+      <tr><td>Reproduzir artigos clássicos</td><td><code>MultiStepLR</code></td><td>Quedas de 10× em épocas marcadas</td></tr>
+      <tr><td>Vários snapshots num só treino</td><td><code>CosineAnnealingWarmRestarts</code></td><td>Cada fim de ciclo é um bom modelo</td></tr>
+      <tr><td>Regra que não existe pronta</td><td><code>LambdaLR</code></td><td>Qualquer função vira cronograma</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 14 pegadinhas -->
+<section class="slide" data-sec="Pegadinhas">
+  <div class="head"><h2 class="rise">Pegadinhas que custam horas</h2></div>
+  <div class="body" style="top:220px"><div class="pits">
+    <article class="rise" style="--i:1"><h3>step() no lugar errado</h3><p>Scheduler de época dentro do loop de batches decai centenas de vezes rápido demais. <code>OneCycleLR</code> chamado só por época faz o inverso.</p></article>
+    <article class="rise" style="--i:2"><h3>total_steps do OneCycleLR</h3><p>Épocas × batches por época. Passar do total gera erro no meio do treino.</p><div class="codebox"><pre data-hl>OneCycleLR(optimizer, max_lr=0.1, epochs=EPOCHS,
+           steps_per_epoch=len(train_loader))</pre></div></article>
+    <article class="rise" style="--i:3"><h3>Treinar além de T_max</h3><p>O cosseno é periódico: depois de <code>T_max</code> o lr de <code>CosineAnnealingLR</code> volta a subir.</p></article>
+    <article class="rise" style="--i:4"><h3>Plateau sem métrica</h3><p><code>ReduceLROnPlateau</code> precisa do valor observado. Use <code>mode="max"</code> para acurácia.</p><div class="codebox"><pre data-hl>scheduler.step(val_loss)</pre></div></article>
+    <article class="rise" style="--i:5"><h3>Esquecer o state_dict</h3><p>Sem salvar o estado do scheduler, o cronograma recomeça ao retomar o treino.</p><div class="codebox"><pre data-hl>torch.save({"opt": optimizer.state_dict(),
+            "sched": scheduler.state_dict()}, "ckpt.pt")</pre></div></article>
+    <article class="rise" style="--i:6"><h3>T_max do warmup + cosseno</h3><p>Em <code>SequentialLR</code>, o cosseno começa depois do aquecimento: <code>T_max</code> é o total menos as épocas de warmup.</p></article>
+  </div></div>
+</section>
+
+<!-- 15 quiz -->
+<section class="slide" data-sec="Teste">
+  <div class="head"><h2 class="rise">Teste rápido</h2></div>
+  <div class="body" style="top:220px"><div class="quiz rise" style="--i:1">
+    <p class="qnum" id="qnum"></p>
+    <p class="qtext" id="qtext"></p>
+    <div class="opts" id="qopts"></div>
+    <p class="why" id="qwhy"></p>
+    <div class="qfoot"><button class="btn" id="qnext" hidden>Próxima pergunta</button><span class="score" id="qscore"></span></div>
+  </div></div>
+</section>
+
+<!-- 16 fim -->
+<section class="slide" data-sec="Para levar">
+  <div class="head"><h2 class="rise">Para levar</h2></div>
+  <div class="body" style="top:250px">
+    <div class="take">
+      <div class="rise" style="--i:1"><h3>Alto, depois baixo</h3><p>Quase todo bom cronograma explora com lr alto e termina com lr baixo. O resto é a forma da transição.</p></div>
+      <div class="rise" style="--i:2"><h3>O tempo é seu</h3><p>Saiba se cada <code>step()</code> é uma época ou um batch, e dimensione <code>T_max</code> e <code>total_steps</code> de acordo.</p></div>
+      <div class="rise" style="--i:3"><h3>Comece simples</h3><p>Cosseno, com aquecimento se usar Adam ou transformers. Troque só se houver motivo medido.</p></div>
+    </div>
+    <p class="rise" style="--i:4;font-size:20px;color:var(--muted);margin-bottom:16px">Documentação oficial de cada scheduler:</p>
+    <div class="docs rise" style="--i:5" id="docsList"></div>
+  </div>
+</section>
+
+<footer class="foot">
+  <span class="sec" id="fsec"></span>
+  <div class="bar"><i id="fbar"></i></div>
+  <span class="count" id="fcount"></span>
+  <button class="navb" id="prev" aria-label="Slide anterior">‹</button>
+  <button class="navb" id="next" aria-label="Próximo slide">›</button>
+</footer>
+</div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const arr=(n,f)=>Array.from({length:n},(_,i)=>f(i));
+const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmt=v=>{if(!isFinite(v))return '∞';if(v===0)return '0';const a=Math.abs(v);return (a<1e-3||a>=1e4)?v.toExponential(2):String(+v.toPrecision(3));};
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function gauss(r){let u=0;while(!u)u=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*r());}
+function hex(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+let K=1;
+function setup(cv){const d=(window.devicePixelRatio||1)*Math.max(K,0.5),w=cv.clientWidth,h=cv.clientHeight;const W=Math.round(w*d),H=Math.round(h*d);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);return{ctx,w,h,d};}
+function niceStep(r,c){const raw=r/c,p=Math.pow(10,Math.floor(Math.log10(raw))),m=raw/p;return (m<1.5?1:m<3?2:m<7?5:10)*p;}
+const MONO=()=>css('--mono').split(',')[0];
+
+/* links para a documentação estável */
+const DOC='https://docs.pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.';
+const SCHED_NAMES=['StepLR','MultiStepLR','ExponentialLR','PolynomialLR','CosineAnnealingLR','CosineAnnealingWarmRestarts','LinearLR','ConstantLR','LambdaLR','MultiplicativeLR','CyclicLR','OneCycleLR','ReduceLROnPlateau','SequentialLR','ChainedScheduler'];
+const docUrl=n=>DOC+n+'.html';
+function linkify(root){root.querySelectorAll('code').forEach(c=>{if(c.closest('a,pre'))return;const t=c.textContent.trim();if(!SCHED_NAMES.includes(t))return;
+  const a=document.createElement('a');a.className='doc';a.href=docUrl(t);a.target='_blank';a.rel='noopener';a.title='Documentação oficial do PyTorch (stable)';c.replaceWith(a);a.appendChild(c);});}
+
+/* realce de sintaxe */
+function hl(src){const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const re=/(#[^\n]*)|("[^"\n]*"|'[^'\n]*')|\b(from|import|for|in|lambda|if|else|def|return|True|False|None)\b|\b(range|min|max|print|len)\b|\b(\d+\.?\d*(?:e-?\d+)?)\b/g;
+  let out='',last=0,m;while((m=re.exec(src))){out+=esc(src.slice(last,m.index));const t=esc(m[0]);
+  out+=m[1]?`<span class="c">${t}</span>`:m[2]?`<span class="s">${t}</span>`:m[3]?`<span class="k">${t}</span>`:m[4]?`<span class="f">${t}</span>`:`<span class="n">${t}</span>`;last=re.lastIndex;}
+  return out+esc(src.slice(last));}
+document.querySelectorAll('pre[data-hl]').forEach(p=>{p.innerHTML=hl(p.textContent);});
+
+/* gráfico genérico */
+function plot(cv,series,o={}){
+  const {ctx,w,h}=setup(cv);ctx.clearRect(0,0,w,h);
+  const pad={l:78,r:o.axis2?74:16,t:16,b:40},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+  const n=Math.max(...series.map(s=>s.data.length)),xMax=Math.max(1,n-1);
+  const vals=series.filter(s=>!s.axis2).flatMap(s=>s.data).filter(v=>isFinite(v));
+  const line=css('--line'),muted=css('--muted');
+  let lo,hi,ticks=[],tf=v=>v;
+  if(o.log){tf=v=>Math.log10(Math.max(v,1e-12));const pos=vals.filter(v=>v>0);lo=Math.floor(Math.log10(Math.min(...pos)));hi=Math.ceil(Math.log10(Math.max(...pos)));if(hi<=lo)hi=lo+1;for(let k=lo;k<=hi;k++)ticks.push(Math.pow(10,k));}
+  else{lo=0;hi=Math.max(...vals);if(!(hi>lo))hi=lo+1;hi*=1.07;const st=niceStep(hi-lo,4);for(let v=0;v<=hi+1e-12;v+=st)ticks.push(v);}
+  const X=i=>pad.l+i/xMax*iw,Y=v=>pad.t+ih-(tf(v)-lo)/(hi-lo)*ih;
+  ctx.font='15px '+MONO()+',monospace';ctx.lineWidth=1;ctx.fillStyle=muted;ctx.textAlign='right';ctx.textBaseline='middle';
+  ticks.forEach(v=>{const y=Math.round(Y(v))+.5;ctx.strokeStyle=line;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(fmt(v),pad.l-10,y);});
+  const xs=niceStep(xMax,Math.max(3,Math.floor(iw/110)));ctx.textAlign='center';ctx.textBaseline='top';
+  for(let i=0;i<=xMax;i+=xs)ctx.fillText(String(i),X(i),h-pad.b+10);
+  (o.markers||[]).forEach(m=>{ctx.save();ctx.strokeStyle=muted;ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(X(m)+.5,pad.t);ctx.lineTo(X(m)+.5,pad.t+ih);ctx.stroke();ctx.restore();});
+  ctx.save();ctx.beginPath();ctx.rect(pad.l,pad.t-3,iw,ih+6);ctx.clip();let a2=null;
+  series.forEach(s=>{let Yf=Y;
+    if(s.axis2){const v2=s.data.filter(isFinite),mn=Math.min(...v2),mx=Math.max(...v2);a2={mn,mx,col:s.color};Yf=v=>pad.t+ih-(v-mn)/((mx-mn)||1)*ih*0.94-ih*0.03;}
+    ctx.strokeStyle=s.color;ctx.lineWidth=s.w||3;ctx.lineJoin='round';ctx.setLineDash(s.dash||[]);ctx.globalAlpha=s.alpha||1;
+    ctx.beginPath();let st=false;const end=s.upto!=null?Math.min(s.upto,s.data.length-1):s.data.length-1;
+    for(let i=0;i<=end;i++){const v=s.data[i];if(!isFinite(v)){st=false;continue;}const x=X(i),y=Yf(v);st?ctx.lineTo(x,y):ctx.moveTo(x,y);st=true;}
+    ctx.stroke();ctx.globalAlpha=1;ctx.setLineDash([]);s._Y=Yf;});
+  ctx.restore();
+  if(a2){ctx.fillStyle=a2.col;ctx.textAlign='left';ctx.textBaseline='middle';[a2.mn,(a2.mn+a2.mx)/2,a2.mx].forEach(v=>{ctx.fillText(v.toFixed(2),w-pad.r+10,pad.t+ih-(v-a2.mn)/((a2.mx-a2.mn)||1)*ih*0.94-ih*0.03);});}
+  if(cv._hover!=null){const i=Math.min(cv._hover,xMax),x=X(i)+.5;ctx.strokeStyle=css('--ink');ctx.globalAlpha=.35;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ih);ctx.stroke();ctx.globalAlpha=1;
+    series.forEach(s=>{const v=s.data[i];if(!isFinite(v))return;ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(x,s._Y(v),5.5,0,7);ctx.fill();});}
+  cv._map={pad,iw,xMax};
+}
+function hover(cv,cb){
+  const f=e=>{const m=cv._map;if(!m)return;const r=cv.getBoundingClientRect(),sc=r.width/cv.clientWidth;const i=Math.round(((e.clientX-r.left)/sc-m.pad.l)/m.iw*m.xMax);cv._hover=Math.max(0,Math.min(m.xMax,i));cb(cv._hover);};
+  cv.addEventListener('pointermove',f);cv.addEventListener('pointerdown',f);cv.addEventListener('pointerleave',()=>{cv._hover=null;cb(null);});
+}
+
+/* ---------- scheduler definitions ---------- */
+const P=(k,v,min,max,st,label)=>({k,v,min,max,st,label});
+const SEL=(k,v,opts,label)=>({k,v,opts,label});
+function oneCycle(T,maxLr,pct,div,fdiv,anneal,three){
+  const init=maxLr/div,mn=init/fdiv;
+  const ph=three?[[pct*T-1,init,maxLr],[2*pct*T-2,maxLr,init],[T-1,init,mn]]:[[pct*T-1,init,maxLr],[T-1,maxLr,mn]];
+  const an=anneal==='cos'?(s,e,q)=>e+(s-e)/2*(Math.cos(Math.PI*q)+1):(s,e,q)=>(e-s)*q+s;
+  return arr(T,t=>{let st=0;for(let i=0;i<ph.length;i++){const [end,s,e]=ph[i];if(t<=end||i===ph.length-1){return an(s,e,(t-st)/((end-st)||1));}st=end;}});
+}
+function cyclic(T,base,max,up,down,mode,g){const tot=up+down,r=up/tot;return arr(T,t=>{const c=Math.floor(1+t/tot),x=1+t/tot-c,sc=x<=r?x/r:(x-1)/(r-1),hgt=(max-base)*sc;
+  return mode==='triangular'?base+hgt:mode==='triangular2'?base+hgt/Math.pow(2,c-1):base+hgt*Math.pow(g,t);});}
+function warmRestarts(T,lr,T0,Tm,eta){return arr(T,t=>{let Ti=T0,Tc=t;while(Tc>=Ti){Tc-=Ti;Ti*=Tm;}return eta+(lr-eta)*(1+Math.cos(Math.PI*Tc/Ti))/2;});}
+function plateau(p){
+  const r=rng(11);let lr=p.lr,loss=2.3,best=Infinity,bad=0,cd=0;const L=[],LR=[],marks=[];
+  for(let t=0;t<p.T;t++){LR.push(lr);const fl=0.15+2.5*lr,rate=Math.min(0.25,1.8*lr)+0.012;
+    loss=Math.max(0.05,loss-rate*(loss-fl)+0.012*gauss(r));L.push(loss);
+    if(loss<best*(1-1e-4)){best=loss;bad=0;}else bad++;
+    if(cd>0){cd--;bad=0;}
+    if(bad>p.patience){const nl=Math.max(lr*p.factor,p.min_lr);if(lr-nl>1e-8){lr=nl;marks.push(t+1);}cd=p.cooldown;bad=0;}}
+  return{lr:LR,loss:L,marks};
+}
+const LOOP={
+ epoch:(T)=>`for epoch in range(${T}):
+    for x, y in train_loader:
+        optimizer.zero_grad()
+        loss_fn(model(x), y).backward()
+        optimizer.step()
+    scheduler.step()            # uma vez por época`,
+ batch:(T)=>`for epoch in range(EPOCHS):
+    for x, y in train_loader:
+        optimizer.zero_grad()
+        loss_fn(model(x), y).backward()
+        optimizer.step()
+        scheduler.step()        # uma vez por batch!`,
+ metric:(T)=>`for epoch in range(${T}):
+    train_one_epoch(model, train_loader, optimizer)
+    val_loss = evaluate(model, val_loader)
+    scheduler.step(val_loss)    # passa a métrica monitorada`
+};
+const GRAN={epoch:'atualiza por época',batch:'atualiza por batch',metric:'reage a uma métrica'};
+
+const S={
+ StepLR:{fam:'Decaimento',gran:'epoch',
+  desc:'Multiplica o lr por <code>gamma</code> a cada <code>step_size</code> épocas. Simples e previsível: a curva vira uma escada.',
+  formula:'lr = lr₀ · gamma^⌊t / step_size⌋',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('step_size',30,1,100,1),P('gamma',0.1,0.05,0.95,0.05),P('T',100,20,300,10,'épocas')],
+  f:p=>({lr:arr(p.T,t=>p.lr*Math.pow(p.gamma,Math.floor(t/p.step_size)))}),
+  code:p=>({imp:'StepLR',make:`scheduler = StepLR(optimizer, step_size=${p.step_size}, gamma=${p.gamma})`}),
+  tip:'Cada degrau costuma causar uma queda brusca na perda logo depois. Ative a escala log: os degraus ficam igualmente espaçados.'},
+ MultiStepLR:{fam:'Decaimento',gran:'epoch',
+  desc:'Igual ao StepLR, mas você escolhe exatamente em quais épocas (<code>milestones</code>) o lr cai.',
+  formula:'lr = lr₀ · gamma^(nº de milestones ≤ t)',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('m1',30,1,299,1,'milestone 1'),P('m2',60,1,299,1,'milestone 2'),P('m3',80,1,299,1,'milestone 3'),P('gamma',0.1,0.05,0.95,0.05),P('T',100,20,300,10,'épocas')],
+  f:p=>{const ms=[p.m1,p.m2,p.m3];return{lr:arr(p.T,t=>p.lr*Math.pow(p.gamma,ms.filter(m=>m<=t).length))};},
+  code:p=>({imp:'MultiStepLR',make:`scheduler = MultiStepLR(optimizer, milestones=[${[...new Set([p.m1,p.m2,p.m3])].sort((a,b)=>a-b).join(', ')}], gamma=${p.gamma})`}),
+  tip:'Receita clássica das ResNets: 90 épocas com quedas de 10× nas épocas 30 e 60.'},
+ ExponentialLR:{fam:'Decaimento',gran:'epoch',
+  desc:'Multiplica o lr por <code>gamma</code> em toda época. É o StepLR com <code>step_size=1</code>.',
+  formula:'lr = lr₀ · gamma^t',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('gamma',0.95,0.8,0.999,0.001),P('T',100,20,300,10,'épocas')],
+  f:p=>({lr:arr(p.T,t=>p.lr*Math.pow(p.gamma,t))}),
+  code:p=>({imp:'ExponentialLR',make:`scheduler = ExponentialLR(optimizer, gamma=${p.gamma})`}),
+  tip:'Pequenas mudanças em gamma têm efeito enorme: 0.95 por 100 épocas reduz o lr 170×; 0.99 reduz só 2.7×. Na escala log, vira uma reta.'},
+ PolynomialLR:{fam:'Decaimento',gran:'epoch',
+  desc:'Decai até zero em <code>total_iters</code> passos seguindo uma potência. Com <code>power=1</code> é uma rampa linear.',
+  formula:'lr = lr₀ · (1 − min(t, total_iters) / total_iters)^power',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('total_iters',80,5,300,1),P('power',1,0.2,4,0.1),P('T',100,20,300,10,'épocas')],
+  f:p=>({lr:arr(p.T,t=>p.lr*Math.pow(1-Math.min(t,p.total_iters)/p.total_iters,p.power))}),
+  code:p=>({imp:'PolynomialLR',make:`scheduler = PolynomialLR(optimizer, total_iters=${p.total_iters}, power=${p.power})`}),
+  tip:'power < 1 mantém o lr alto por mais tempo e cai no fim; power > 1 despenca cedo. Depois de total_iters, o lr fica em zero.'},
+ CosineAnnealingLR:{fam:'Decaimento',gran:'epoch',
+  desc:'Desce de <code>lr₀</code> até <code>eta_min</code> em meia onda de cosseno. Passa bastante tempo em lr alto, depois desacelera suavemente.',
+  formula:'lr = eta_min + (lr₀ − eta_min) · (1 + cos(π·t / T_max)) / 2',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('T_max',100,5,300,1),P('eta_min',0,0,0.05,0.001),P('T',100,20,300,10,'épocas')],
+  f:p=>({lr:arr(p.T,t=>p.eta_min+(p.lr-p.eta_min)*(1+Math.cos(Math.PI*t/p.T_max))/2)}),
+  code:p=>({imp:'CosineAnnealingLR',make:`scheduler = CosineAnnealingLR(optimizer, T_max=${p.T_max}, eta_min=${p.eta_min})`}),
+  tip:'Experimente T_max = 40 com 100 épocas: o lr volta a subir depois de T_max. Quase sempre é um bug, não intenção.'},
+ LinearLR:{fam:'Aquecimento',gran:'epoch',
+  desc:'Multiplica o lr por um fator que vai linearmente de <code>start_factor</code> até <code>end_factor</code> em <code>total_iters</code> passos. O uso mais comum é aquecimento.',
+  formula:'lr = lr₀ · (start + (end − start) · min(t, total_iters) / total_iters)',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('start_factor',0.1,0.01,1,0.01),P('end_factor',1,0.01,1,0.01),P('total_iters',20,1,200,1),P('T',60,20,300,10,'épocas')],
+  f:p=>({lr:arr(p.T,t=>p.lr*(p.start_factor+(p.end_factor-p.start_factor)*Math.min(t,p.total_iters)/p.total_iters))}),
+  code:p=>({imp:'LinearLR',make:`scheduler = LinearLR(optimizer, start_factor=${p.start_factor}, end_factor=${p.end_factor}, total_iters=${p.total_iters})`}),
+  tip:'Inverta (start 1, end 0.01) e ele vira um decaimento linear. Para aquecer e depois decair, combine com SequentialLR.'},
+ ConstantLR:{fam:'Aquecimento',gran:'epoch',
+  desc:'Mantém o lr multiplicado por <code>factor</code> durante <code>total_iters</code> passos e depois volta ao valor cheio de uma vez.',
+  formula:'lr = lr₀ · factor  se t < total_iters,  senão lr₀',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('factor',0.33,0.01,1,0.01),P('total_iters',20,1,200,1),P('T',60,20,300,10,'épocas')],
+  f:p=>({lr:arr(p.T,t=>t<p.total_iters?p.lr*p.factor:p.lr)}),
+  code:p=>({imp:'ConstantLR',make:`scheduler = ConstantLR(optimizer, factor=${p.factor}, total_iters=${p.total_iters})`}),
+  tip:'É um aquecimento “em degrau”. Raramente usado sozinho; aparece mais dentro de ChainedScheduler.'},
+ LambdaLR:{fam:'Aquecimento',gran:'epoch',
+  desc:'Você passa uma função <code>lr_lambda(t)</code> e o lr vira <code>lr₀ · lr_lambda(t)</code>. Qualquer cronograma cabe aqui.',
+  formula:'lr = lr₀ · lr_lambda(t)',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),SEL('forma','inverse sqrt',['warmup linear','inverse sqrt','1/(1+k·t)']),P('warmup',10,1,100,1),P('k',0.05,0.005,0.5,0.005),P('T',100,20,300,10,'passos')],
+  f:p=>{const W=p.warmup;const g=p.forma==='warmup linear'?t=>Math.min(1,(t+1)/W):p.forma==='inverse sqrt'?t=>Math.min((t+1)/W,Math.sqrt(W/(t+1))):t=>1/(1+p.k*t);return{lr:arr(p.T,t=>p.lr*g(t))};},
+  code:p=>{const W=p.warmup;const l=p.forma==='warmup linear'?`lambda t: min(1.0, (t + 1) / ${W})`:p.forma==='inverse sqrt'?`lambda t: min((t + 1) / ${W}, (${W} / (t + 1)) ** 0.5)`:`lambda t: 1 / (1 + ${p.k} * t)`;return{imp:'LambdaLR',make:`scheduler = LambdaLR(optimizer, lr_lambda=${l})`};},
+  tip:'“inverse sqrt” é o cronograma do artigo original do Transformer: aquece linearmente e depois cai com 1/√t.'},
+ MultiplicativeLR:{fam:'Aquecimento',gran:'epoch',
+  desc:'A cada passo, multiplica o lr <em>atual</em> pelo valor de uma função. Diferente do LambdaLR, o efeito é acumulativo.',
+  formula:'lr(t) = lr(t−1) · lr_lambda(t)',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('f1',0.98,0.8,1.05,0.005,'fator antes'),P('switch',30,1,200,1,'troca na época'),P('f2',0.9,0.7,1.05,0.005,'fator depois'),P('T',100,20,300,10,'épocas')],
+  f:p=>{let v=p.lr;return{lr:arr(p.T,t=>{if(t>0)v*=t<p.switch?p.f1:p.f2;return v;})};},
+  code:p=>({imp:'MultiplicativeLR',make:`scheduler = MultiplicativeLR(optimizer, lr_lambda=lambda t: ${p.f1} if t < ${p.switch} else ${p.f2})`}),
+  tip:'Com fator constante ele vira o ExponentialLR. Fatores acima de 1 fazem o lr crescer, útil num range test.'},
+ CyclicLR:{fam:'Cíclicos',gran:'batch',
+  desc:'O lr oscila em triângulo entre <code>base_lr</code> e <code>max_lr</code>. Os modos <code>triangular2</code> e <code>exp_range</code> encolhem a amplitude a cada ciclo.',
+  formula:'lr = base_lr + (max_lr − base_lr) · triângulo(t) · escala(ciclo)',
+  params:[P('base_lr',0.001,0.0001,0.05,0.0001),P('max_lr',0.1,0.01,1,0.01),P('step_size_up',20,2,100,1),P('step_size_down',20,2,100,1),SEL('mode','triangular2',['triangular','triangular2','exp_range']),P('gamma',0.99,0.95,1,0.001,'gamma (exp_range)'),P('T',200,40,400,10,'iterações')],
+  f:p=>({lr:cyclic(p.T,p.base_lr,p.max_lr,p.step_size_up,p.step_size_down,p.mode,p.gamma)}),
+  optLr:p=>p.base_lr,
+  code:p=>({imp:'CyclicLR',make:`scheduler = CyclicLR(optimizer, base_lr=${p.base_lr}, max_lr=${p.max_lr},
+                     step_size_up=${p.step_size_up}, step_size_down=${p.step_size_down},
+                     mode="${p.mode}"${p.mode==='exp_range'?`, gamma=${p.gamma}`:''})`}),
+  tip:'Por padrão ele também cicla o momentum ao contrário do lr (cycle_momentum=True). A ideia de Leslie Smith: subidas periódicas ajudam a escapar de regiões ruins.'},
+ OneCycleLR:{fam:'Cíclicos',gran:'batch',
+  desc:'Um único ciclo: sobe de <code>max_lr/div_factor</code> até <code>max_lr</code> durante <code>pct_start</code> do treino e depois desce muito abaixo do valor inicial.',
+  formula:'início = max_lr / div_factor   fim = início / final_div_factor',
+  params:[P('max_lr',0.1,0.01,1,0.01),P('T',200,20,500,10,'total_steps'),P('pct_start',0.3,0.05,0.6,0.01),P('div_factor',25,2,100,1),SEL('final_div_factor','1e4',['1e2','1e3','1e4']),SEL('anneal_strategy','cos',['cos','linear']),SEL('three_phase','False',['False','True'])],
+  f:p=>({lr:oneCycle(p.T,p.max_lr,p.pct_start,p.div_factor,+p.final_div_factor,p.anneal_strategy,p.three_phase==='True')}),
+  optLr:p=>p.max_lr,
+  code:p=>({imp:'OneCycleLR',make:`scheduler = OneCycleLR(optimizer, max_lr=${p.max_lr}, total_steps=${p.T},
+                       pct_start=${p.pct_start}, div_factor=${p.div_factor},
+                       final_div_factor=${p.final_div_factor}, anneal_strategy="${p.anneal_strategy}",
+                       three_phase=${p.three_phase})`}),
+  tip:'O trecho final, muito abaixo do lr inicial, é o que dá o “ajuste fino”. Na escala log isso fica evidente.'},
+ CosineAnnealingWarmRestarts:{fam:'Cíclicos',gran:'epoch',
+  desc:'Cosseno que reinicia: depois de <code>T_0</code> passos o lr volta ao topo. Com <code>T_mult</code> > 1, cada ciclo fica mais longo que o anterior (SGDR).',
+  formula:'lr = eta_min + (lr₀ − eta_min) · (1 + cos(π·T_cur / T_i)) / 2',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('T_0',10,2,100,1),P('T_mult',2,1,3,1),P('eta_min',0.001,0,0.05,0.001),P('T',150,20,400,10,'épocas')],
+  f:p=>({lr:warmRestarts(p.T,p.lr,p.T_0,p.T_mult,p.eta_min)}),
+  code:p=>({imp:'CosineAnnealingWarmRestarts',make:`scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=${p.T_0}, T_mult=${p.T_mult}, eta_min=${p.eta_min})`}),
+  tip:'Planeje o total de épocas para terminar no fim de um ciclo (com T_0=10 e T_mult=2: 10, 30, 70, 150…). Parar no meio de uma subida desperdiça o treino.'},
+ ReduceLROnPlateau:{fam:'Reativo',gran:'metric',
+  desc:'Observa uma métrica (aqui, uma perda de validação simulada, em cinza) e multiplica o lr por <code>factor</code> quando ela passa <code>patience</code> épocas sem melhorar.',
+  formula:'se sem melhora por > patience épocas: lr ← max(lr · factor, min_lr)',
+  params:[P('lr',0.1,0.001,0.3,0.001,'lr'),P('factor',0.1,0.05,0.9,0.05),P('patience',10,0,40,1),P('cooldown',0,0,20,1),P('min_lr',0.00001,0,0.01,0.00001),P('T',150,40,300,10,'épocas')],
+  f:plateau,
+  code:p=>({imp:'ReduceLROnPlateau',make:`scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=${p.factor},
+                              patience=${p.patience}, cooldown=${p.cooldown}, min_lr=${p.min_lr})`}),
+  tip:'Repare na causa e efeito: a perda estaciona, a paciência esgota, o lr cai e a perda volta a descer. Com patience muito baixa, o ruído dispara reduções cedo demais.'},
+ SequentialLR:{fam:'Composição',gran:'epoch',
+  desc:'Encadeia schedulers no tempo. Aqui: <code>LinearLR</code> aquece até o marco, depois <code>CosineAnnealingLR</code> assume. É a receita padrão de transformers.',
+  formula:'t < marco → warmup(t)    t ≥ marco → cosine(t − marco)',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('warmup',10,1,100,1,'épocas de aquecimento'),P('start_factor',0.01,0.001,1,0.001),P('eta_min',0,0,0.05,0.001),P('T',100,20,300,10,'épocas')],
+  f:p=>{const W=Math.min(p.warmup,p.T-1);return{lr:arr(p.T,t=>t<W?p.lr*(p.start_factor+(1-p.start_factor)*t/W):p.eta_min+(p.lr-p.eta_min)*(1+Math.cos(Math.PI*(t-W)/(p.T-W)))/2)};},
+  code:p=>{const W=Math.min(p.warmup,p.T-1);return{imp:'LinearLR, CosineAnnealingLR, SequentialLR',make:`warmup = LinearLR(optimizer, start_factor=${p.start_factor}, total_iters=${W})
+cosine = CosineAnnealingLR(optimizer, T_max=${p.T-W}, eta_min=${p.eta_min})
+scheduler = SequentialLR(optimizer, schedulers=[warmup, cosine], milestones=[${W}])`};},
+  tip:'Repare que T_max do cosseno é o total menos o aquecimento. Esquecer essa subtração é um erro comum.'},
+ ChainedScheduler:{fam:'Composição',gran:'epoch',
+  desc:'Aplica vários schedulers <em>ao mesmo tempo</em>: os fatores se multiplicam. Aqui, um <code>ConstantLR</code> reduz o lr no início enquanto um <code>ExponentialLR</code> decai o tempo todo.',
+  formula:'lr = lr₀ · fator_constant(t) · gamma^t',
+  params:[P('lr',0.1,0.001,1,0.001,'lr'),P('factor',0.1,0.01,1,0.01),P('total_iters',10,1,100,1),P('gamma',0.97,0.85,0.999,0.001),P('T',100,20,300,10,'épocas')],
+  f:p=>({lr:arr(p.T,t=>p.lr*Math.pow(p.gamma,t)*(t<p.total_iters?p.factor:1))}),
+  code:p=>({imp:'ChainedScheduler, ConstantLR, ExponentialLR',make:`scheduler = ChainedScheduler([
+    ConstantLR(optimizer, factor=${p.factor}, total_iters=${p.total_iters}),
+    ExponentialLR(optimizer, gamma=${p.gamma}),
+])`}),
+  tip:'Diferença-chave: SequentialLR alterna schedulers no tempo; ChainedScheduler soma os efeitos simultaneamente.'}
+};
+
+
+/* ---------- parábola ---------- */
+function drawPara(){
+  const lr=+$('#plr').value;$('#plrv').textContent=lr.toFixed(2);
+  const cv=$('#para');const {ctx,w,h}=setup(cv);ctx.clearRect(0,0,w,h);
+  const X=x=>w/2+x/3.2*(w/2-14),Y=y=>h-26-y/9.5*(h-44);
+  ctx.strokeStyle=css('--line');ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,Y(0)+.5);ctx.lineTo(w,Y(0)+.5);ctx.stroke();
+  ctx.beginPath();for(let i=0;i<=240;i++){const x=-3.2+6.4*i/240;i?ctx.lineTo(X(x),Y(x*x)):ctx.moveTo(X(x),Y(x*x));}ctx.strokeStyle=css('--muted');ctx.lineWidth=3;ctx.stroke();
+  let x=-2.4;const pts=[x];for(let k=0;k<12;k++){x=x*(1-2*lr);pts.push(x);}
+  ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();const c2=css('--c2');ctx.strokeStyle=c2;ctx.lineWidth=2.4;
+  for(let k=0;k<pts.length-1;k++){ctx.globalAlpha=1-k/14;ctx.beginPath();ctx.moveTo(X(pts[k]),Y(pts[k]**2));ctx.lineTo(X(pts[k+1]),Y(pts[k+1]**2));ctx.stroke();}
+  pts.forEach((p,k)=>{ctx.globalAlpha=1-k/14;ctx.fillStyle=k===0?css('--ink'):c2;ctx.beginPath();ctx.arc(X(p),Y(p*p),k===0?10:7,0,7);ctx.fill();});
+  ctx.restore();ctx.globalAlpha=1;
+  const r=1-2*lr;let t,d;
+  if(lr<0.08){t='Lento demais';d=`Cada passo encolhe x só ${(lr*200).toFixed(0)}%. Depois de 12 passos ainda estamos em x = ${fmt(pts[12])}.`;}
+  else if(lr<0.495){t='Converge suavemente';d=`x é multiplicado por ${r.toFixed(2)} a cada passo e desliza sempre pelo mesmo lado do vale.`;}
+  else if(lr<=0.505){t='Um passo só';d='Fator zero: o primeiro passo cai exatamente no mínimo. É o lr perfeito para esta curvatura.';}
+  else if(lr<0.995){t='Oscila, mas converge';d=`Fator ${r.toFixed(2)}, negativo: x troca de lado a cada passo, mas o salto diminui.`;}
+  else if(lr<=1.005){t='Oscila para sempre';d='Fator −1: x pula entre −2.4 e 2.4 eternamente. É o limite de estabilidade.';}
+  else{t='Diverge';d=`Fator ${r.toFixed(2)}: cada salto é maior que o anterior. Depois de 12 passos, x = ${fmt(pts[12])}. É o “loss virou NaN”.`;}
+  $('#regime').textContent=t;$('#regimeTxt').textContent=d;
+}
+$('#plr').addEventListener('input',drawPara);
+
+/* ---------- curva ideal (gesto do slide 3) ---------- */
+const idealData=arr(200,t=>t<20?0.08+0.92*t/20:0.02+0.98*(1+Math.cos(Math.PI*(t-20)/180))/2);
+function drawIdeal(p,step){
+  const cv=$('#ideal');const {ctx,w,h}=setup(cv);ctx.clearRect(0,0,w,h);
+  const n=idealData.length,X=i=>10+i/(n-1)*(w-20),Y=v=>h-60-v*(h-110);
+  ctx.strokeStyle=css('--line');ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,h-59.5);ctx.lineTo(w,h-59.5);ctx.stroke();
+  const zone=(a,b,col,al)=>{ctx.fillStyle=col;ctx.globalAlpha=al;ctx.fillRect(X(a),20,X(b)-X(a),h-80);ctx.globalAlpha=1;};
+  if(step>=1)zone(0,75,css('--c1'),.07);
+  if(step>=2)zone(140,199,css('--c3'),.08);
+  const upto=Math.floor(p*(n-1));
+  ctx.beginPath();ctx.moveTo(X(0),Y(idealData[0]));for(let i=1;i<=upto;i++)ctx.lineTo(X(i),Y(idealData[i]));
+  ctx.lineTo(X(upto),h-60);ctx.lineTo(X(0),h-60);ctx.closePath();const g=ctx.createLinearGradient(0,0,0,h);const c1=hex(css('--c1'));g.addColorStop(0,`rgba(${c1},.22)`);g.addColorStop(1,`rgba(${c1},0)`);ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();ctx.moveTo(X(0),Y(idealData[0]));for(let i=1;i<=upto;i++)ctx.lineTo(X(i),Y(idealData[i]));ctx.strokeStyle=css('--c1');ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle=css('--c1');ctx.beginPath();ctx.arc(X(upto),Y(idealData[upto]),8,0,7);ctx.fill();
+  ctx.font='italic 26px '+css('--serif').split(',')[0]+',serif';ctx.fillStyle=css('--muted');ctx.textBaseline='top';
+  [[0,'aquecimento','left'],[110,'recozimento','center'],[199,'ajuste fino','right']].forEach(([i,t,al])=>{if(i<=upto){ctx.textAlign=al;ctx.fillText(t,X(i),h-48);}});
+  if(upto>=20){ctx.textAlign='left';ctx.textBaseline='bottom';ctx.fillText('pico',X(20)+14,Y(1)-6);}
+  ctx.font='15px '+MONO();ctx.textAlign='left';ctx.fillText('lr',4,0);
+}
+let idealAnim=0;
+function animIdeal(step,fresh){cancelAnimationFrame(idealAnim);if(!fresh||reduced){drawIdeal(1,step);return;}const t0=performance.now();
+  const f=now=>{const p=Math.min(1,(now-t0)/1900);drawIdeal(1-Math.pow(1-p,3),step);if(p<1)idealAnim=requestAnimationFrame(f);};idealAnim=requestAnimationFrame(f);}
+
+/* ---------- famílias ---------- */
+const FAMINFO=[
+ ['Decaimento','O lr só desce, em degraus ou contínuo.',['StepLR','MultiStepLR','ExponentialLR','PolynomialLR','CosineAnnealingLR'],t=>(1+Math.cos(Math.PI*t))/2],
+ ['Aquecimento','Começa baixo e sobe, protegendo os primeiros passos.',['LinearLR','ConstantLR','LambdaLR','MultiplicativeLR'],t=>Math.min(1,0.1+t*2.2)],
+ ['Cíclicos','Sobem e descem de propósito, uma ou várias vezes.',['CyclicLR','OneCycleLR','CosineAnnealingWarmRestarts'],t=>{const c=(t*3)%1;return c<.5?c*2:2-c*2;}],
+ ['Reativo','Só reduz quando a validação estaciona.',['ReduceLROnPlateau'],t=>t<.35?1:t<.7?.45:.18],
+ ['Composição','Monta cronogramas a partir de outros.',['SequentialLR','ChainedScheduler'],t=>t<.15?t/.15:(1+Math.cos(Math.PI*(t-.15)/.85))/2]
+];
+$('#fams').innerHTML=FAMINFO.map(([n,d,list,f],i)=>{const pts=arr(61,k=>`${(k/60*300).toFixed(1)},${(84-f(k/60)*76).toFixed(1)}`).join(' ');
+  return `<div class="rise" style="--i:${i+1}"><span class="n">${i+1}</span><h3>${n}</h3><svg viewBox="0 0 300 90" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--c1)" stroke-width="3" vector-effect="non-scaling-stroke"/></svg><p>${d}</p>${list.map(x=>`<code>${x}</code>`).join(' ')}</div>`;}).join('');
+
+/* ---------- laboratórios ---------- */
+const labs=[];
+function makeLab(root){
+  const names=root.dataset.lab.split(','),L={root,names,cur:root.dataset.start,view:'curva'};
+  root.innerHTML=`<div><div class="chips">${names.length>1?names.map(n=>`<button class="chip" data-n="${n}">${n}</button>`).join(''):''}</div>
+    <p class="sname"></p><span class="gran"></span><p class="desc"></p><div class="formula"></div><div class="params"></div></div>
+    <div><div class="lab-top"><div class="tabs" role="tablist"><button class="tab" role="tab" data-v="curva">Curva</button><button class="tab" role="tab" data-v="codigo">Código</button></div><label class="toggle"><input type="checkbox" class="logt"> escala log</label></div>
+    <div class="view"><canvas style="height:470px"></canvas><div class="codebox" hidden><pre></pre></div></div>
+    <div class="readout">&nbsp;</div><div class="stats"></div><p class="tip"></p></div>`;
+  L.cv=root.querySelector('canvas');L.code=root.querySelector('.codebox');
+  root.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{L.cur=b.dataset.n;L.cv._hover=null;buildL(L);renderL(L);});
+  root.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{L.view=b.dataset.v;renderL(L);});
+  root.querySelector('.logt').onchange=()=>renderL(L);
+  hover(L.cv,i=>{renderL(L);const r=root.querySelector('.readout');if(i==null||!L.res){r.innerHTML='&nbsp;';return;}r.textContent=`t = ${i}   lr = ${fmt(L.res.lr[i])}`+(L.res.loss?`   perda val = ${L.res.loss[i].toFixed(3)}`:'');});
+  buildL(L);labs.push(L);return L;
+}
+function buildL(L){
+  const d=S[L.cur],root=L.root;
+  root.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c.dataset.n===L.cur));
+  root.querySelector('.sname').innerHTML=`<a href="${docUrl(L.cur)}" target="_blank" rel="noopener" title="Documentação oficial do PyTorch (stable)">${L.cur}</a>`;
+  root.querySelector('.gran').textContent=GRAN[d.gran];root.querySelector('.desc').innerHTML=d.desc;linkify(root.querySelector('.desc'));
+  root.querySelector('.formula').textContent=d.formula;root.querySelector('.tip').textContent=d.tip;
+  const box=root.querySelector('.params');box.innerHTML='';
+  d.params.forEach(q=>{const id='p_'+L.cur+'_'+q.k,w=document.createElement('div');w.className='ctrl';const lab=q.label||q.k;
+    if(q.opts){w.innerHTML=`<label for="${id}">${lab}</label><span></span><select id="${id}">${q.opts.map(o=>`<option${o===state[L.cur][q.k]?' selected':''}>${o}</option>`).join('')}</select>`;
+      w.querySelector('select').onchange=e=>{state[L.cur][q.k]=e.target.value;renderL(L);};}
+    else{w.innerHTML=`<label for="${id}">${lab}</label><output>${fmt(state[L.cur][q.k])}</output><input type="range" id="${id}" min="${q.min}" max="${q.max}" step="${q.st}" value="${state[L.cur][q.k]}">`;
+      const inp=w.querySelector('input'),out=w.querySelector('output');inp.oninput=()=>{state[L.cur][q.k]=+(+inp.value).toPrecision(6);out.textContent=fmt(state[L.cur][q.k]);renderL(L);};}
+    box.appendChild(w);});
+}
+function renderL(L){
+  const d=S[L.cur],p=state[L.cur],root=L.root;L.res=d.f(p);
+  root.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.v===L.view));
+  const showCode=L.view==='codigo';L.cv.hidden=showCode;L.code.hidden=!showCode;root.querySelector('.toggle').style.visibility=showCode?'hidden':'visible';
+  if(!showCode){const s=[{data:L.res.lr,color:css('--c1'),w:3.4}];if(L.res.loss)s.push({data:L.res.loss,color:css('--c6'),axis2:true,w:2,alpha:.85});
+    plot(L.cv,s,{log:root.querySelector('.logt').checked,markers:L.res.marks,axis2:!!L.res.loss});}
+  const lr=L.res.lr;root.querySelector('.stats').innerHTML=`<span>pico <b>${fmt(Math.max(...lr))}</b></span><span>final <b>${fmt(lr[lr.length-1])}</b></span><span>médio <b>${fmt(lr.reduce((a,b)=>a+b,0)/lr.length)}</b></span>`+(L.res.marks?`<span>reduções <b>${L.res.marks.length}</b></span>`:'');
+  const c=d.code(p),optLr=d.optLr?d.optLr(p):p.lr;
+  L.code.querySelector('pre').innerHTML=hl(`import torch
+from torch.optim.lr_scheduler import ${c.imp}
+
+optimizer = torch.optim.SGD(model.parameters(), lr=${optLr}, momentum=0.9)
+${c.make}
+
+${LOOP[d.gran](p.T)}`);
+}
+const state={};Object.keys(S).forEach(k=>{state[k]={};S[k].params.forEach(q=>state[k][q.k]=q.v);});
+document.querySelectorAll('[data-lab]').forEach(makeLab);
+
+/* ---------- comparação ---------- */
+const COLS=['--c1','--c2','--c3','--c4','--c5','--c7','--c8','--c9','--c6'];
+const CMP=['StepLR','MultiStepLR','ExponentialLR','PolynomialLR','CosineAnnealingLR','CosineAnnealingWarmRestarts','CyclicLR','OneCycleLR','SequentialLR'];
+const cmpOn=new Set(['StepLR','CosineAnnealingLR','OneCycleLR']),cmpData={};
+CMP.forEach(k=>{const p={};S[k].params.forEach(q=>p[q.k]=q.v);p.T=100;if(k==='CosineAnnealingLR')p.T_max=100;const v=S[k].f(p).lr,m=Math.max(...v);cmpData[k]=v.map(x=>x/m);});
+$('#cmpPick').innerHTML=CMP.map((k,i)=>`<button class="chip sw" data-k="${k}" style="--col:var(${COLS[i]})" aria-pressed="${cmpOn.has(k)}"><i></i>${k}</button>`).join('');
+$('#cmpPick').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{const k=b.dataset.k;cmpOn.has(k)?cmpOn.delete(k):cmpOn.add(k);b.setAttribute('aria-pressed',cmpOn.has(k));renderCmp();});
+function renderCmp(){const cv=$('#cmpChart');const s=CMP.map((k,i)=>({k,data:cmpData[k],color:css(COLS[i]),w:3.4})).filter(x=>cmpOn.has(x.k));
+  if(!s.length){const {ctx,w,h}=setup(cv);ctx.clearRect(0,0,w,h);ctx.fillStyle=css('--muted');ctx.font='24px '+css('--sans').split(',')[0];ctx.textAlign='center';ctx.fillText('Ligue pelo menos uma curva acima.',w/2,h/2);return;}
+  plot(cv,s,{});}
+hover($('#cmpChart'),i=>{renderCmp();const r=$('#cmpRead');if(i==null){r.innerHTML='&nbsp;';return;}r.textContent=`t = ${i}   `+CMP.filter(k=>cmpOn.has(k)).map(k=>`${k} ${cmpData[k][i].toFixed(2)}`).join('   ');});
+
+/* ---------- corrida ---------- */
+const RT=120;
+const RACE=[['Constante','--c6',arr(RT,()=>1)],['StepLR','--c4',arr(RT,t=>Math.pow(0.25,Math.floor(t/40)))],['ExponentialLR','--c7',arr(RT,t=>Math.pow(0.965,t))],
+ ['CosineAnnealingLR','--c1',arr(RT,t=>(1+Math.cos(Math.PI*t/RT))/2)],['WarmRestarts','--c5',warmRestarts(RT,1,15,2,0.004)],['OneCycleLR','--c2',oneCycle(RT,1,0.3,25,1e4,'cos',false)],
+ ['Warmup + Cosine','--c3',arr(RT,t=>t<12?0.05+0.95*t/12:(1+Math.cos(Math.PI*(t-12)/(RT-12)))/2)]];
+const raceOn=new Set(RACE.map(r=>r[0]));
+const X0=-11,X1=7,Y0=-4.5,Y1=4.5,SX=-9.5,SY=3.2;
+const F=(x,y)=>0.08*x*x+1.5*y*y+0.35*Math.sin(2.2*x)*Math.cos(1.7*y)+0.6;
+const G=(x,y)=>[0.16*x+0.77*Math.cos(2.2*x)*Math.cos(1.7*y),3*y-0.595*Math.sin(2.2*x)*Math.sin(1.7*y)];
+let FMIN=Infinity,GMIN=[0,0],FMAX=-Infinity;
+for(let i=0;i<=600;i++)for(let j=0;j<=300;j++){const x=X0+(X1-X0)*i/600,y=Y0+(Y1-Y0)*j/300,v=F(x,y);if(v<FMIN){FMIN=v;GMIN=[x,y];}if(v>FMAX)FMAX=v;}
+let seed=3,paths=[],raceK=RT,raceAnim=0,mapCache=null;
+$('#racePick').innerHTML=RACE.map(r=>`<button class="chip sw" data-k="${r[0]}" style="--col:var(${r[1]})" aria-pressed="true"><i></i>${r[0]}</button>`).join('');
+$('#racePick').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{const k=b.dataset.k;raceOn.has(k)?raceOn.delete(k):raceOn.add(k);b.setAttribute('aria-pressed',raceOn.has(k));drawRace();showRes();});
+function simulate(){const lrMax=+$('#raceLr').value,noise=+$('#raceNoise').value;
+  paths=RACE.map(([name,col,shape])=>{const r=rng(seed*7919+1);let x=SX,y=SY;const pts=[[x,y]];let div=false;
+    for(let t=0;t<RT;t++){const lr=lrMax*shape[t],g=G(x,y),n1=gauss(r),n2=gauss(r);if(!div){x-=lr*(g[0]+noise*n1);y-=lr*(g[1]+noise*n2);if(Math.abs(x)>60||Math.abs(y)>60||!isFinite(x+y))div=true;}pts.push([x,y]);}
+    const tail=pts.slice(-10);return{name,col,pts,div,final:div?Infinity:tail.reduce((a,p)=>a+F(p[0],p[1]),0)/tail.length};});}
+function buildMap(W,H){const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d'),img=g.createImageData(W,H),lo=hex(css('--map-lo')),hi=hex(css('--map-hi'));
+  const VL=Math.log(0.03),VH=Math.log(FMAX-FMIN+0.03),s=2,B=16;
+  for(let py=0;py<H;py+=s)for(let px=0;px<W;px+=s){const x=X0+(px+1)/W*(X1-X0),y=Y1-(py+1)/H*(Y1-Y0);
+    let q=(Math.log(F(x,y)-FMIN+0.03)-VL)/(VH-VL);q=Math.min(1,Math.max(0,q));const band=Math.floor(q*B);let t=1-band/B;if(band%2)t=Math.max(0,t-0.035);t=Math.pow(t,1.25);
+    const col=[0,1,2].map(i=>lo[i]+(hi[i]-lo[i])*t);
+    for(let dy=0;dy<s&&py+dy<H;dy++)for(let dx=0;dx<s&&px+dx<W;dx++){const o=((py+dy)*W+px+dx)*4;img.data[o]=col[0];img.data[o+1]=col[1];img.data[o+2]=col[2];img.data[o+3]=255;}}
+  g.putImageData(img,0,0);return c;}
+function drawRace(){const cv=$('#race');const {ctx,w,h,d}=setup(cv);const W=Math.round(w*d),H=Math.round(h*d);
+  if(!mapCache||mapCache.width!==W||mapCache.height!==H)mapCache=buildMap(W,H);
+  ctx.drawImage(mapCache,0,0,w,h);const mx=x=>(x-X0)/(X1-X0)*w,my=y=>(Y1-y)/(Y1-Y0)*h;
+  ctx.save();ctx.beginPath();ctx.rect(0,0,w,h);ctx.clip();
+  paths.forEach(p=>{if(!raceOn.has(p.name))return;const col=css(p.col);ctx.strokeStyle=col;ctx.lineWidth=2.6;ctx.lineJoin='round';ctx.globalAlpha=.9;
+    ctx.beginPath();const end=Math.min(raceK,p.pts.length-1);for(let i=0;i<=end;i++){const [x,y]=p.pts[i];i?ctx.lineTo(mx(x),my(y)):ctx.moveTo(mx(x),my(y));}ctx.stroke();ctx.globalAlpha=1;
+    const [x,y]=p.pts[end];ctx.fillStyle=col;ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(mx(x),my(y),8,0,7);ctx.fill();ctx.stroke();});
+  ctx.restore();
+  ctx.strokeStyle=css('--ink');ctx.fillStyle=css('--paper');ctx.lineWidth=3;ctx.beginPath();ctx.arc(mx(SX),my(SY),11,0,7);ctx.fill();ctx.stroke();
+  const sx=mx(GMIN[0]),sy=my(GMIN[1]);ctx.fillStyle=css('--c4');ctx.beginPath();for(let i=0;i<10;i++){const r=i%2?6:15,a=-Math.PI/2+i*Math.PI/5;ctx.lineTo(sx+r*Math.cos(a),sy+r*Math.sin(a));}ctx.closePath();ctx.fill();ctx.strokeStyle=css('--ink');ctx.lineWidth=1.5;ctx.stroke();
+  if(raceK<RT){ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(16,16,190,40);ctx.fillStyle=css('--ink');ctx.font='18px '+MONO();ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(`passo ${raceK} / ${RT}`,30,36);}
+}
+function showRes(){const list=paths.filter(p=>raceOn.has(p.name)).sort((a,b)=>a.final-b.final),fin=list.filter(p=>isFinite(p.final)),worst=Math.max(...fin.map(p=>p.final-FMIN),0.01);
+  $('#raceRes').innerHTML=`<p style="font-size:17px;color:var(--muted);margin-bottom:14px">Perda média nos últimos 10 passos (mínimo ≈ ${FMIN.toFixed(2)})</p>`+list.map(p=>`<div class="res" style="--col:var(${p.col})"><span>${p.name}</span><div><div class="bar" style="transform:scaleX(${p.div?1:Math.max(0.02,(p.final-FMIN)/worst)});${p.div?'opacity:.3':''}"></div></div><span class="val">${p.div?'divergiu':p.final.toFixed(3)}</span></div>`).join('');}
+function runRace(){simulate();cancelAnimationFrame(raceAnim);if(reduced){raceK=RT;drawRace();showRes();return;}
+  $('#raceRes').innerHTML='';const t0=performance.now();const f=now=>{const p=Math.min(1,(now-t0)/4200);raceK=Math.floor(p*RT);drawRace();if(p<1)raceAnim=requestAnimationFrame(f);else showRes();};raceAnim=requestAnimationFrame(f);}
+$('#raceGo').onclick=runRace;$('#raceSeed').onclick=()=>{seed++;runRace();};
+$('#raceLr').oninput=e=>{$('#raceLrV').textContent=(+e.target.value).toFixed(2);};
+$('#raceNoise').oninput=e=>{$('#raceNoiseV').textContent=(+e.target.value).toFixed(1);};
+['#raceLr','#raceNoise'].forEach(s=>$(s).addEventListener('change',()=>{simulate();raceK=RT;drawRace();showRes();}));
+
+/* ---------- quiz ---------- */
+const QUIZ=[
+ {q:'10 épocas, 500 batches por época, OneCycleLR com step() a cada batch. Qual o total_steps?',o:['10','500','5000','510'],a:2,w:'total_steps conta chamadas a step(): 10 × 500 = 5000. Passar disso gera erro.'},
+ {q:'Qual é a ordem correta dentro do loop de treino?',o:['scheduler.step() e depois optimizer.step()','optimizer.step() e depois scheduler.step()','Tanto faz','Só scheduler.step(): ele atualiza os pesos'],a:1,w:'O otimizador usa o lr atual; só depois o scheduler calcula o próximo. Invertido, o primeiro valor do cronograma é pulado.'},
+ {q:'CosineAnnealingLR com T_max=50, treinando 100 épocas. O que acontece após a época 50?',o:['O lr fica em eta_min','O lr volta a subir','O PyTorch gera erro','O lr vai a zero'],a:1,w:'cos(π·t/T_max) é periódico: entre as épocas 50 e 100 o lr sobe de volta ao valor inicial.'},
+ {q:'Qual scheduler precisa receber um valor em step(), como a perda de validação?',o:['StepLR','OneCycleLR','ReduceLROnPlateau','LambdaLR'],a:2,w:'ReduceLROnPlateau é o único reativo: compara a métrica com o melhor valor já visto.'},
+ {q:'Qual a diferença entre SequentialLR e ChainedScheduler?',o:['São apelidos','Sequential troca de scheduler em marcos; Chained aplica todos ao mesmo tempo','Chained só funciona com Adam','Sequential exige ReduceLROnPlateau'],a:1,w:'SequentialLR passa o controle em cada milestone; ChainedScheduler multiplica os efeitos a cada passo.'}
+];
+let qi=0,qscore=0,qans=false;
+function showQ(){const it=QUIZ[qi];qans=false;$('#qnum').textContent=`Pergunta ${qi+1} de ${QUIZ.length}`;$('#qtext').textContent=it.q;$('#qwhy').textContent='';$('#qnext').hidden=true;
+  $('#qscore').textContent=`${qscore} acerto${qscore===1?'':'s'}`;
+  $('#qopts').innerHTML=it.o.map((o,i)=>`<button class="opt" data-i="${i}">${o}</button>`).join('');
+  $('#qopts').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(qans)return;qans=true;const i=+b.dataset.i;
+    $('#qopts').querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.i===it.a)x.classList.add('right');});
+    if(i===it.a){qscore++;$('#qwhy').textContent='Certo. '+it.w;}else{b.classList.add('wrong');$('#qwhy').textContent='Não exatamente. '+it.w;}
+    $('#qscore').textContent=`${qscore} acerto${qscore===1?'':'s'}`;
+    $('#qnext').hidden=false;$('#qnext').textContent=qi<QUIZ.length-1?'Próxima pergunta':'Recomeçar o teste';});}
+$('#qnext').onclick=()=>{if(qi<QUIZ.length-1)qi++;else{qi=0;qscore=0;}showQ();};
+showQ();
+
+/* ---------- fim ---------- */
+$('#docsList').innerHTML=SCHED_NAMES.map(n=>`<code>${n}</code>`).join(' ');
+linkify(document.body);
+
+/* ---------- navegação ---------- */
+const palco=$('#palco'),slides=[...document.querySelectorAll('.slide')],N=slides.length;
+let cur=0,step=0;
+function stepsOf(i){return +(slides[i].dataset.steps||0);}
+function onEnter(i,fresh){
+  if(i===1)drawPara();
+  if(i===2)animIdeal(step,fresh);
+  slides[i].querySelectorAll('[data-lab]').forEach(r=>{const L=labs.find(l=>l.root===r);if(L)renderL(L);});
+  if(slides[i].contains($('#cmpChart')))renderCmp();
+  if(slides[i].contains($('#race'))){drawRace();}
+}
+function applyStep(){
+  const s=slides[cur];
+  s.querySelectorAll('.frag').forEach(f=>f.toggleAttribute('data-shown',step>=+f.dataset.f));
+  if(cur===3){const lines=[4,10,11,12];$('#hlbar').style.setProperty('--line',lines[step]);s.querySelectorAll('.point').forEach(p=>p.classList.toggle('on',+p.dataset.p===step));}
+  if(cur===2)drawIdeal(1,step);
+}
+function go(i,st,dir){
+  i=Math.max(0,Math.min(N-1,i));const changed=i!==cur||!slides[i].hasAttribute('data-on');
+  palco.dataset.dir=dir;
+  if(changed){slides.forEach((s,k)=>s.toggleAttribute('data-on',k===i));}
+  cur=i;step=st;applyStep();
+  if(changed)onEnter(i,dir==='fwd');
+  $('#fsec').textContent=slides[i].dataset.sec;$('#fcount').textContent=`${String(i+1).padStart(2,'0')} / ${N}`;
+  $('#fbar').style.setProperty('--p',(i+1)/N);$('#prev').disabled=i===0&&step===0;$('#next').disabled=i===N-1;
+  try{history.replaceState(null,'','#'+(i+1));}catch(e){}
+}
+function next(){if(step<stepsOf(cur))go(cur,step+1,'fwd');else if(cur<N-1)go(cur+1,0,'fwd');}
+function prev(){if(step>0)go(cur,step-1,'back');else if(cur>0)go(cur-1,stepsOf(cur-1),'back');}
+$('#next').onclick=next;$('#prev').onclick=prev;
+document.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='select'){if(e.key==='Escape')e.target.blur();return;}
+  if(['ArrowRight','PageDown',' ','Enter'].includes(e.key)){if(e.key==='Enter'&&tag==='button')return;if(e.key===' '&&tag==='button')return;e.preventDefault();next();}
+  else if(['ArrowLeft','PageUp','Backspace'].includes(e.key)){e.preventDefault();prev();}
+  else if(e.key==='Home'){go(0,0,'back');}else if(e.key==='End'){go(N-1,stepsOf(N-1),'fwd');}
+  else if(e.key==='f'||e.key==='F'){try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}catch(err){}}
+});
+let tx=null,ty=null;
+document.addEventListener('touchstart',e=>{const t=e.target;if(t.closest('input,select,canvas,button,a'))return tx=null;tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
+document.addEventListener('touchend',e=>{if(tx==null)return;const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.3)dx<0?next():prev();tx=null;},{passive:true});
+
+/* palco escalado */
+function ajusta(){K=Math.min(innerWidth/1920,innerHeight/1080);palco.style.setProperty('--k',K);mapCache=null;onEnter(cur,false);applyStep();}
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(ajusta,100);},{passive:true});
+K=Math.min(innerWidth/1920,innerHeight/1080);palco.style.setProperty('--k',K);
+simulate();showRes();
+const start=Math.max(0,Math.min(N-1,(parseInt(location.hash.slice(1),10)||1)-1));
+go(start,0,'fwd');
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{onEnter(cur,false);});
+})();
+</script>
+</body>
+</html>
